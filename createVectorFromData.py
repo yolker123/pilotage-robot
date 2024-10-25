@@ -128,3 +128,14 @@ for resultat in resultats:
     print(f"θ (angle avec l'axe z) = {resultat['theta']:.2f}°")
     print(f"φ (angle dans le plan xy) = {resultat['phi']:.2f}°")
     print("-------------------------------------------------")
+    
+# retourner q'un point si meme signe dans point proche
+# fonction prend un point en entrée et retourne r et teta (pour r, passer x y et z, formule rac(x²+y²+z²)), pour tetat, atan2(y,x)
+# avec Hr = H total -> isoler I pour chaque point et faire la moyenne
+# Hteta = arctan(Hy/Hx) -> 12 valeurs de I -> moyenne
+
+# Faire une fonction pour calculer Hr et Hteta avec notre I
+# Calculer Htotal = sqrt(Hr² + Hteta²)
+# Visualiser les points générer
+
+# creer une variable resolution, qui augmente la densité de points
