@@ -72,19 +72,26 @@ class MagneticFieldSimulation:
         teta = math.acos(z / r) if r != 0 else 0.0
         phi = math.atan2(y, x)
         return r, teta, phi
-    
-    def selectionner_points_proches(self):
-        resultats_sans_origine = [r for r in self.resultats if not (r['x'] == 0 and r['y'] == 0 and r['z'] == 0)]
-        points_selectionnes = []
 
-        for axis in ['x', 'y', 'z']:
-            axis_points = sorted(resultats_sans_origine,
-                                 key=lambda r: abs(r[axis]) if all(r[a] == 0 for a in 'xyz' if a != axis) else float('inf'))[:2]
-            if len(axis_points) > 1 and (axis_points[0][axis] * axis_points[1][axis] > 0):
-                axis_points = [axis_points[0]]
-            points_selectionnes.extend(axis_points)
-        print(points_selectionnes)
-        return points_selectionnes
+    import math
+
+    def selectionner_points_proches(self):
+        # Calculer la distance r pour chaque point généré
+        for point in self.resultats:
+            point['r'] = math.sqrt(point['x'] ** 2 + point['y'] ** 2 + point['z'] ** 2)
+
+        # Trier les points par leur distance r (distance la plus petite en premier)
+        points_tries = sorted(self.resultats, key=lambda point: point['r'])
+
+        # Sélectionner les 6 points avec les distances les plus petites
+        points_proches = points_tries[:6]
+
+        # Afficher les résultats
+        print("Les 6 points proches les plus proches :")
+        for idx, point in enumerate(points_proches, start=1):
+            print(f"Point {idx}: {point}, Distance r: {point['r']}")
+
+        return points_proches
 
     def moyenne_I(self, points_proches):
         I_valeurs = []
