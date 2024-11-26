@@ -105,13 +105,13 @@ class MagneticFieldSimulation:
         facteur2 = 1 / (self.k**3 * r**3)
         denominateur = self.S * (self.k**3) * (facteur1 + facteur2) * math.cos(theta)
         res =  (2 * math.pi * H_r / denominateur) if denominateur else None
-        return math.sqrt(res.real**2 + abs(res.imag**2)) if res else None
+        return res
 
     def calculer_I_Htetha(self, H_theta, r, theta):
         sin_theta = np.sin(theta)
         facteur = -1 / (self.k * r) + 1j / (self.k**2 * r**2) + 1 / (self.k**3 * r**3)
         res = (4 * np.pi * H_theta / (self.S * self.k**3 * facteur * sin_theta)) if sin_theta else None
-        return math.sqrt(res.real**2 + abs(res.imag**2))  if res else None
+        return res
     
     def calculer_Hr(self, x, y, z, I):
         if x == 0 and y == 0 and z == 0:
@@ -120,21 +120,22 @@ class MagneticFieldSimulation:
         
         facteur = (1j / (self.k**2 * r**2) + 1 / (self.k**3 * r**3)) 
         
-        Hr = (I * self.S * self.k**3 / (2 * np.pi)) * facteur * np.cos(theta)
-        modHr = math.sqrt(Hr.real**2 + Hr.imag**2)
-        return modHr
+        Hr_complex = (I * self.S * self.k**3 / (2 * np.pi)) * facteur 
+        modHr = math.sqrt(Hr_complex.real**2 + Hr_complex.imag**2)
+        Hr = modHr * np.cos(theta)
+        return Hr
 
     def calculer_Htheta(self, x, y, z, I):
         if x == 0 and y == 0 and z == 0:
             return 0
         r, theta, phi = self.calcul_r_teta_phi(x, y, z)
-        sin_theta = np.sin(theta)
         
         facteur = (-1 / (self.k * r) + 1j / (self.k**2 * r**2) + 1 / (self.k**3 * r**3))
         
-        Htheta = (I * self.S * self.k**3 / (4 * np.pi)) * facteur * sin_theta
-        modHtheta = math.sqrt(Htheta.real**2 + Htheta.imag**2)
-        return modHtheta
+        Htheta_complex = (I * self.S * self.k**3 / (4 * np.pi)) * facteur 
+        modHtheta = math.sqrt(Htheta_complex.real**2 + Htheta_complex.imag**2)
+        Htheta = modHtheta * np.sin(theta)
+        return Htheta
     
     def convertir_spherique_to_cartesien(self, Hr, Htheta, Hphi, theta, phi):
         Hx = Hr * np.sin(theta) * np.cos(phi) + Htheta * np.cos(theta) * np.cos(phi) - Hphi * np.sin(phi)
@@ -178,9 +179,10 @@ class MagneticFieldSimulation:
         for point in points_base:
             x, y, z = point['x'], point['y'], point['z']
             Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            if x == 0:
+            
                 # print(x, y, z)
                 # print(Hx, Hy, Hz)
+            if x==0:
                 ax.quiver(x, y, z, Hx, Hy, Hz, color='b', length=0.01, normalize=True, label="Base" if 'base' not in locals() else "")
             base = True
         
@@ -188,9 +190,10 @@ class MagneticFieldSimulation:
         for point in points_interpolés:
             x, y, z = point['x'], point['y'], point['z']
             Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            if x == 0:
+           
                 # print(x, y, z)
                 # print(Hx, Hy, Hz)
+            if x==0:
                 ax.quiver(x, y, z, Hx, Hy, Hz, color='r', length=0.01, normalize=True, label="Interpolé" if 'interpolé' not in locals() else "")
             interpolé = True
         
