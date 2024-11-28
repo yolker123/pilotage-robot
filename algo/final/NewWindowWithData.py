@@ -28,6 +28,7 @@ class MagneticFieldSimulation:
 
     def magnetic_field_helix(self, x, y, z):
         """Calcule le champ magnétique d'une spire au point (x, y, z)."""
+
         def dB_element(phi):
             x0 = self.R * np.cos(phi)
             y0 = self.R * np.sin(phi)
@@ -61,7 +62,6 @@ class MagneticFieldSimulation:
             point.update({'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'H_total': H_total})
         return self.resultats
 
-    
     def interpoler_trilineaire(self, sommets, u, v, w):
         """Interpolation trilineaire entre 8 sommets."""
         # Extraire Hx, Hy, Hz des sommets
@@ -72,14 +72,14 @@ class MagneticFieldSimulation:
         # Formule d'interpolation trilineaire pour chaque composant
         def interp(values):
             return (
-                values[0] * (1 - u) * (1 - v) * (1 - w) +
-                values[1] * u * (1 - v) * (1 - w) +
-                values[2] * (1 - u) * v * (1 - w) +
-                values[3] * u * v * (1 - w) +
-                values[4] * (1 - u) * (1 - v) * w +
-                values[5] * u * (1 - v) * w +
-                values[6] * (1 - u) * v * w +
-                values[7] * u * v * w
+                    values[0] * (1 - u) * (1 - v) * (1 - w) +
+                    values[1] * u * (1 - v) * (1 - w) +
+                    values[2] * (1 - u) * v * (1 - w) +
+                    values[3] * u * v * (1 - w) +
+                    values[4] * (1 - u) * (1 - v) * w +
+                    values[5] * u * (1 - v) * w +
+                    values[6] * (1 - u) * v * w +
+                    values[7] * u * v * w
             )
 
         Hx_interp = interp(Hx)
@@ -92,36 +92,36 @@ class MagneticFieldSimulation:
         z_coords = [s['z'] for s in sommets]
 
         x_interp = (
-            x_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-            x_coords[1] * u * (1 - v) * (1 - w) +
-            x_coords[2] * (1 - u) * v * (1 - w) +
-            x_coords[3] * u * v * (1 - w) +
-            x_coords[4] * (1 - u) * (1 - v) * w +
-            x_coords[5] * u * (1 - v) * w +
-            x_coords[6] * (1 - u) * v * w +
-            x_coords[7] * u * v * w
+                x_coords[0] * (1 - u) * (1 - v) * (1 - w) +
+                x_coords[1] * u * (1 - v) * (1 - w) +
+                x_coords[2] * (1 - u) * v * (1 - w) +
+                x_coords[3] * u * v * (1 - w) +
+                x_coords[4] * (1 - u) * (1 - v) * w +
+                x_coords[5] * u * (1 - v) * w +
+                x_coords[6] * (1 - u) * v * w +
+                x_coords[7] * u * v * w
         )
 
         y_interp = (
-            y_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-            y_coords[1] * u * (1 - v) * (1 - w) +
-            y_coords[2] * (1 - u) * v * (1 - w) +
-            y_coords[3] * u * v * (1 - w) +
-            y_coords[4] * (1 - u) * (1 - v) * w +
-            y_coords[5] * u * (1 - v) * w +
-            y_coords[6] * (1 - u) * v * w +
-            y_coords[7] * u * v * w
+                y_coords[0] * (1 - u) * (1 - v) * (1 - w) +
+                y_coords[1] * u * (1 - v) * (1 - w) +
+                y_coords[2] * (1 - u) * v * (1 - w) +
+                y_coords[3] * u * v * (1 - w) +
+                y_coords[4] * (1 - u) * (1 - v) * w +
+                y_coords[5] * u * (1 - v) * w +
+                y_coords[6] * (1 - u) * v * w +
+                y_coords[7] * u * v * w
         )
 
         z_interp = (
-            z_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-            z_coords[1] * u * (1 - v) * (1 - w) +
-            z_coords[2] * (1 - u) * v * (1 - w) +
-            z_coords[3] * u * v * (1 - w) +
-            z_coords[4] * (1 - u) * (1 - v) * w +
-            z_coords[5] * u * (1 - v) * w +
-            z_coords[6] * (1 - u) * v * w +
-            z_coords[7] * u * v * w
+                z_coords[0] * (1 - u) * (1 - v) * (1 - w) +
+                z_coords[1] * u * (1 - v) * (1 - w) +
+                z_coords[2] * (1 - u) * v * (1 - w) +
+                z_coords[3] * u * v * (1 - w) +
+                z_coords[4] * (1 - u) * (1 - v) * w +
+                z_coords[5] * u * (1 - v) * w +
+                z_coords[6] * (1 - u) * v * w +
+                z_coords[7] * u * v * w
         )
 
         return {
@@ -132,8 +132,7 @@ class MagneticFieldSimulation:
             'Hy': Hy_interp,
             'Hz': Hz_interp
         }
-    
-    
+
     def augmenter_resolution(self, points):
         """Augmente la résolution de la grille avec interpolation trilineaire."""
         print(f"Nombre initial de points : {len(points)}")
@@ -184,7 +183,7 @@ class MagneticFieldSimulation:
                         H_total = np.linalg.norm([Hx, Hy, Hz])
                         interpolated_point.update({'H_total': H_total})
                         interpolated_points.append(interpolated_point)
-        
+
         print(f"Nombre de points interpolés : {len(interpolated_points)}")
 
         self.points_haute_resolution = interpolated_points
@@ -200,7 +199,7 @@ class MagneticFieldApp(QMainWindow):
         self.simulation = MagneticFieldSimulation(resolution=3)
         print(f"Nombre de points originaux: {len(self.simulation.resultats)}")
         print(f"Nombre de points interpolés: {len(self.simulation.points_haute_resolution)}")
-        
+
         # Création de la disposition principale
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
@@ -209,7 +208,6 @@ class MagneticFieldApp(QMainWindow):
         self.add_tab_3d_vectors()
         self.add_tab_2d_plane()
         self.add_tab_gaussian_and_radial()
-
 
     def add_tab_3d_vectors(self):
         """Onglet 1 : Affichage 3D des vecteurs."""
@@ -319,11 +317,14 @@ class MagneticFieldApp(QMainWindow):
         # Filtrer les points selon le plan et la valeur
         epsilon = 1e-5  # Tolérance pour la comparaison
         if plane == 'x':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['x'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['x'], value, atol=epsilon)]
         elif plane == 'y':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['y'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['y'], value, atol=epsilon)]
         elif plane == 'z':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['z'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['z'], value, atol=epsilon)]
         else:
             filtered_points = []
 
@@ -358,8 +359,10 @@ class MagneticFieldApp(QMainWindow):
 
         # Interpoler les données sur la grille
         H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid), method='linear', fill_value=0)
+        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
+        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
 
         # Créer une nouvelle figure avec GridSpec
         self.figure_2d.clear()  # Effacer la figure existante
@@ -378,7 +381,8 @@ class MagneticFieldApp(QMainWindow):
 
         # Sous-plot pour le champ vectoriel
         ax2 = self.figure_2d.add_subplot(gs[0, 2])  # Colonne de droite
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red', scale=20)
+        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
+                            scale=20)
         ax2.set_title(f"Direction du champ magnétique (H{axis1}, H{axis2})")
         ax2.set_xlabel(f'{axis1} (m)')
         ax2.set_ylabel(f'{axis2} (m)')
@@ -388,7 +392,6 @@ class MagneticFieldApp(QMainWindow):
 
         # Rafraîchir le canvas
         self.canvas_2d.draw()
-
 
     def add_tab_gaussian_and_radial(self):
         """Onglet 3 : Affichage du champ radial et de l'amplitude simulée avec sélecteur de plan."""
@@ -463,11 +466,14 @@ class MagneticFieldApp(QMainWindow):
         # Filtrer les points selon le plan et la valeur
         epsilon = 1e-5  # Tolérance pour la comparaison
         if plane == 'x':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['x'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['x'], value, atol=epsilon)]
         elif plane == 'y':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['y'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['y'], value, atol=epsilon)]
         elif plane == 'z':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['z'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['z'], value, atol=epsilon)]
         else:
             filtered_points = []
 
@@ -502,8 +508,10 @@ class MagneticFieldApp(QMainWindow):
 
         # Interpoler les données sur la grille
         H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid), method='linear', fill_value=0)
+        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
+        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
 
         # Effacer la figure existante
         self.figure_gaussian.clf()
@@ -526,7 +534,8 @@ class MagneticFieldApp(QMainWindow):
         ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
 
         # Tracer le champ vectoriel avec coloration basée sur la magnitude
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, H_total_grid, cmap='inferno', scale=20, scale_units='width', angles='xy')
+        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, H_total_grid,
+                            cmap='inferno', scale=20, scale_units='width', angles='xy')
         ax2.set_title(f"Champ vectoriel (H{axis1}, H{axis2})")
         ax2.set_xlabel(f'{axis1} (m)')
         ax2.set_ylabel(f'{axis2} (m)')

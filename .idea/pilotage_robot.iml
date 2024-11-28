@@ -4,7 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/Code python assembleur" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.11 (pilotage_robot)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 virtualenv at ~/_ALL_IN_ONE/ISEN/be/Code GUI version 202409/.venv_linux" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
