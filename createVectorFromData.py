@@ -80,9 +80,9 @@ def traiter_fichiers(dossier):
 def afficher_vecteurs_3D(resultats):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-
     for resultat in resultats:
         x, y, z = resultat['x'], resultat['y'], resultat['z']
+        print(resultat)
         Hx, Hy, Hz = resultat['Hx'], resultat['Hy'], resultat['Hz']
         H_magnitude = resultat['|H|']
         # Origine (x, y, z) et vecteur H
@@ -220,14 +220,18 @@ def moyenne_I(points_proches):
         return None
     
     
-# Fonction pour calculer Hr pour un point donné (x, y, z)
 def calculer_Hr(x, y, z, I_moyenne):
     r = math.sqrt(x**2 + y**2 + z**2)
+    
+    # Éviter la division par zéro
+    if r == 0:
+        return 0  # Retourne 0 ou une autre valeur par défaut si r est nul
+    
     theta = math.degrees(math.acos(z / r)) if r != 0 else 0
 
     facteur = (1j / (k**2 * r**2)) + (1 / (k**3 * r**3))
     Hr = (I_moyenne * S * k**3 / (2 * math.pi)) * facteur * math.cos(math.radians(theta)) * np.exp(-1j * k * r)
-    
+
     return abs(Hr)  # Prendre le module pour obtenir une valeur réelle
 
 # Fonction pour calculer Hθ pour un point donné (x, y, z)
@@ -251,6 +255,7 @@ def calculer_H_total(x, y, z, I):
     H_total = math.sqrt(Hr**2 + Htheta**2)
     return H_total
     
+
 # Exemple d'utilisation
 dossier = "logMeasure"  # Dossier contenant les fichiers de mesure
 resultats = traiter_fichiers(dossier)           
@@ -299,3 +304,71 @@ for point in resultats:
 
 # Visualiser les points générer
 # creer une variable resolution, qui augmente la densité de points
+
+# Fonction pour interpoler les points entre deux points existants
+def interpoler_points(p1, p2, resolution, I_moyenne):
+    points_interpolés = []
+    for i in range(1, resolution):
+        fraction = i / resolution
+        x = p1['x'] + (p2['x'] - p1['x']) * fraction
+        y = p1['y'] + (p2['y'] - p1['y']) * fraction
+        z = p1['z'] + (p2['z'] - p1['z']) * fraction
+
+        # Calculer |H|, r et tetha pour les points interpolés
+        r = math.sqrt(x**2 + y**2 + z**2)
+        tetha = math.degrees(math.atan2(y, x))
+        H_magnitude = calculer_Hr(x, y, z, I_moyenne)
+
+        # Créer le point interpolé avec tous les attributs nécessaires
+        point_interpolé = {
+            'x': x,
+            'y': y,
+            'z': z,
+            '|H|': H_magnitude,
+            'r': r,
+            'tetha': tetha,
+            'Hx': p1['Hx'],  # ou interpoler en fonction des besoins
+            'Hy': p1['Hy'],
+            'Hz': p1['Hz'],
+            'Bx': p1['Bx'],
+            'By': p1['By'],
+            'Bz': p1['Bz']
+        }
+        points_interpolés.append(point_interpolé)
+    
+    return points_interpolés
+
+
+# Fonction pour augmenter la résolution du champ magnétique
+def augmenter_resolution(resultats, resolution, I_moyenne):
+    points_haute_resolution = []
+
+    for i in range(len(resultats) - 1):
+        p1 = resultats[i]
+        p2 = resultats[i + 1]
+
+        # Ajouter le point initial
+        points_haute_resolution.append(p1)
+        print("p1:", p1)
+        # Ajouter les points interpolés
+        points_interpolés = interpoler_points(p1, p2, resolution, I_moyenne)
+        points_haute_resolution.extend(points_interpolés)
+
+    # Ajouter le dernier point
+    points_haute_resolution.append(resultats[-1])
+
+    return points_haute_resolution
+
+# Exemple d'utilisation avec une résolution choisie
+resolution = 5
+points_haute_resolution = augmenter_resolution(points_proches, resolution, I_moyenne)
+
+# Affichage des vecteurs pour les points interpolés avec la haute résolution
+afficher_vecteurs_3D(points_haute_resolution)
+
+# Afficher les résultats pour vérifier
+for point in points_haute_resolution:
+    print(f"x = {point['x']:.2f}, y = {point['y']:.2f}, z = {point['z']:.2f}")
+    print(f"|H| = {point['|H|']:.4e} A/m")
+    print(f"r = {point['r']:.4f}, tetha = {point['tetha']:.2f}°")
+    print("-------------------------------------------------")

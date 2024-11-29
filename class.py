@@ -29,8 +29,8 @@ class ChampMagnetique:
         Bx, By, Bz = amp_x / (self.S * self.omega), amp_y / (self.S * self.omega), amp_z / (self.S * self.omega)
         Hx, Hy, Hz = Bx / self.mu0, By / self.mu0, Bz / self.mu0
         H_magnitude = math.sqrt(Hx**2 + Hy**2 + Hz**2)
-        Htheta = math.degrees(math.acos(Hz / H_magnitude)) if H_magnitude != 0 else 0.0
-        Hphi = math.degrees(math.atan2(Hy, Hx))
+        Htheta = math.acos(Hz / H_magnitude) if H_magnitude != 0 else 0.0
+        Hphi = math.atan2(Hy, Hx)
         return (Hx, Hy, Hz), H_magnitude, Htheta, Hphi
 
     def traiter_fichiers(self):
@@ -49,8 +49,8 @@ class ChampMagnetique:
 
     def calcul_r_teta(self, x, y, z):
         r = math.sqrt(x ** 2 + y ** 2 + z ** 2)
-        teta = math.degrees(math.acos(z / r)) if r != 0 else 0.0
-        phi = math.degrees(math.atan2(y, x))
+        teta = math.acos(z / r) if r != 0 else 0.0
+        phi = math.atan2(y, x)
         return r, teta
 
     def selectionner_points_proches(self):
@@ -63,6 +63,7 @@ class ChampMagnetique:
             if len(axis_points) > 1 and (axis_points[0][axis] * axis_points[1][axis] > 0):
                 axis_points = [axis_points[0]]
             points_selectionnes.extend(axis_points)
+        print(points_selectionnes)
         return points_selectionnes
 
     def moyenne_I(self, points_proches):
@@ -82,13 +83,13 @@ class ChampMagnetique:
 
     def calculer_I(self, H_r, r, theta):
         facteur1, facteur2 = 1j / (self.k**2 * r**2), 1 / (self.k**3 * r**3)
-        # denominateur = self.S * (self.k**3) * (facteur1 + facteur2) * math.cos(math.radians(theta))
-        denominateur = self.S * (self.k**3) * (facteur1 + facteur2) * 1
+        denominateur = self.S * (self.k**3) * (facteur1 + facteur2) * math.cos(math.radians(theta))
+        # denominateur = self.S * (self.k**3) * (facteur1 + facteur2) * 1
         return abs(2 * math.pi * H_r / denominateur) if denominateur else None
 
     def calculer_I_Htetha(self, H_theta, r, theta):
-        # sin_theta = np.sin(np.radians(theta))
-        sin_theta = 1
+        sin_theta = np.sin(np.radians(theta))
+        # sin_theta = 1
         facteur = -1 / (self.k * r) + 1j / (self.k**2 * r**2) + 1 / (self.k**3 * r**3)
         return abs(4 * np.pi * H_theta / (self.S * self.k**3 * facteur * sin_theta)) if sin_theta else None
 

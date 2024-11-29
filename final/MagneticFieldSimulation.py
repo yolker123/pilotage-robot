@@ -1,38 +1,40 @@
-import itertools
-import numpy as np
-import matplotlib.pyplot as plt
+
+
 from scipy.constants import mu_0
 from scipy.integrate import quad
+import itertools
+import numpy as np
 import math
 
 class MagneticFieldSimulation:
-    def __init__(self, R=1, resolution=1, S=10, I=1.0):
+    def __init__(self, resolution=3, R=0.01, I=1.0):
         self.R = R
-        self.resolution = resolution  # Nombre de subdivisions par axe
-        self.S = S  # Facteur d'échelle
-        self.I = I  # Courant électrique en A
-        self.mu0 = 4 * math.pi * 1e-7  # Perméabilité du vide en T·m/A
-        self.points_haute_resolution = []
+        self.I = I
+        self.resolution = resolution
+        self.mu0 = 4 * math.pi * 1e-7
         self.resultats = []
+        self.points_haute_resolution = []
+        self.generate_simulated_points()
+        self.augmenter_resolution(self.resultats)
 
-    def magnetic_field_helix(self, x, y, z, R=0.01, I=1.0):
+    def magnetic_field_helix(self, x, y, z):
+        """Calcule le champ magnétique d'une spire au point (x, y, z)."""
         def dB_element(phi):
-            x0 = R * np.cos(phi)
-            y0 = R * np.sin(phi)
-            z0 = 0
+            x0 = self.R * np.cos(phi)
+            y0 = self.R * np.sin(phi)
+            z0 = 0  # Spire dans le plan xy
             r_vec = np.array([x - x0, y - y0, z - z0])
             r_mag = np.linalg.norm(r_vec)
-            if r_mag == 0:
+            if r_mag == 0:  # Évite la singularité
                 return np.array([0, 0, 0])
-            dL = np.array([-R * np.sin(phi), R * np.cos(phi), 0])
-            dB = (self.mu0 * I / (4 * np.pi)) * np.cross(dL, r_vec) / (r_mag ** 3)
+            dL = np.array([-self.R * np.sin(phi), self.R * np.cos(phi), 0])  # Direction du courant
+            dB = (mu_0 * self.I / (4 * np.pi)) * np.cross(dL, r_vec) / (r_mag ** 3)
             return dB
 
         Bx, _ = quad(lambda phi: dB_element(phi)[0], 0, 2 * np.pi)
         By, _ = quad(lambda phi: dB_element(phi)[1], 0, 2 * np.pi)
         Bz, _ = quad(lambda phi: dB_element(phi)[2], 0, 2 * np.pi)
-        B_total = np.array([Bx, By, Bz])
-        return B_total
+        return np.array([Bx, By, Bz])
 
     def generate_simulated_points(self):
         x_min, x_max = -0.1, 0.1
@@ -46,9 +48,11 @@ class MagneticFieldSimulation:
         for point in self.resultats:
             Bx, By, Bz = self.magnetic_field_helix(point['x'], point['y'], point['z'])
             Hx, Hy, Hz = Bx / self.mu0, By / self.mu0, Bz / self.mu0
-            point.update({'Hx': Hx, 'Hy': Hy, 'Hz': Hz})
+            H_total = np.linalg.norm([Hx, Hy, Hz])
+            point.update({'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'H_total': H_total})
         return self.resultats
 
+    
     def interpoler_trilineaire(self, sommets, u, v, w):
         """Interpolation trilineaire entre 8 sommets."""
         # Extraire Hx, Hy, Hz des sommets
@@ -119,9 +123,12 @@ class MagneticFieldSimulation:
             'Hy': Hy_interp,
             'Hz': Hz_interp
         }
-
+    
+    
     def augmenter_resolution(self, points):
         """Augmente la résolution de la grille avec interpolation trilineaire."""
+        print(f"Nombre initial de points : {len(points)}")
+
         interpolated_points = []
         grid_points = np.array([[point['x'], point['y'], point['z']] for point in points])
 
@@ -154,7 +161,7 @@ class MagneticFieldSimulation:
                         z = z_unique_sorted[k + dz]
                         point = find_point(x, y, z)
                         if point is None:
-                            raise ValueError(f"Point not found for coordinates x={x}, y={y}, z={z}")
+                            raise ValueError(f"Point not found pour les coordonnées x={x}, y={y}, z={z}")
                         cube.append(point)
 
                     # Interpolation pour `resolution + 1` subdivisions
@@ -164,39 +171,12 @@ class MagneticFieldSimulation:
                         if (u == 0 and v == 0 and w == 0) or (u == 1 and v == 1 and w == 1):
                             continue
                         interpolated_point = self.interpoler_trilineaire(cube, u, v, w)
+                        Hx, Hy, Hz = interpolated_point['Hx'], interpolated_point['Hy'], interpolated_point['Hz']
+                        H_total = np.linalg.norm([Hx, Hy, Hz])
+                        interpolated_point.update({'H_total': H_total})
                         interpolated_points.append(interpolated_point)
+        
+        print(f"Nombre de points interpolés : {len(interpolated_points)}")
 
         self.points_haute_resolution = interpolated_points
 
-    def afficher_vecteurs_3D(self, points=None):
-        points_base = self.resultats
-        points_interpolés = points or self.points_haute_resolution
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Points bleus : Points initiaux (sommets)
-        for point in points_base:
-            x, y, z = point['x'], point['y'], point['z']
-            Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            if x == 0:
-                ax.quiver(x, y, z, Hx, Hy, Hz, color='b', length=0.01, normalize=True)
-
-        # # Points rouges : Points interpolés
-        # for point in points_interpolés:
-        #     x, y, z = point['x'], point['y'], point['z']
-        #     Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-        #     if x == 0:
-        #         ax.quiver(x, y, z, Hx, Hy, Hz, color='r', length=0.005, normalize=True)  # Réduire la longueur
-
-        # Légende et affichage
-        plt.show()
-
-    def execute_pipeline(self):
-        simulated_points = self.generate_simulated_points()
-        self.augmenter_resolution(simulated_points)
-        self.afficher_vecteurs_3D()
-
-# Exécution avec une résolution plus élevée pour obtenir plus de points par face
-simulation = MagneticFieldSimulation(resolution=4)  # Par exemple, résolution 3 pour 4 subdivisions
-simulation.execute_pipeline()
