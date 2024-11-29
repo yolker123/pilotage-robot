@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.constants import mu_0
 from scipy.integrate import quad
+from PyQt5.QtCore import Qt
 import math
 
 from scipy.interpolate import griddata
@@ -251,7 +252,8 @@ class MagneticFieldApp(QMainWindow):
         tab.setLayout(layout)
 
         # Ajout des sélecteurs
-        selector_layout = QHBoxLayout()
+        selector_layout = QHBoxLayout()  # Layout horizontal pour aligner les éléments sur la même ligne
+        selector_layout.setContentsMargins(0, 0, 0, 0)  # Enlève les marges autour du layout
 
         # Sélecteur de plan
         plane_label = QLabel("Plan:")
@@ -264,11 +266,15 @@ class MagneticFieldApp(QMainWindow):
         self.value_selector_2d = QComboBox()
         self.value_selector_2d.currentTextChanged.connect(self.update_tab_2d_plane)
 
-        selector_layout.addWidget(plane_label)
-        selector_layout.addWidget(self.plane_selector_2d)
-        selector_layout.addWidget(value_label)
-        selector_layout.addWidget(self.value_selector_2d)
+        # Ajouter les widgets dans le même layout horizontal
+        selector_layout.addWidget(plane_label, alignment=Qt.AlignLeft)
+        selector_layout.addWidget(self.plane_selector_2d, alignment=Qt.AlignLeft)
+        selector_layout.addWidget(value_label, alignment=Qt.AlignLeft)
+        selector_layout.addWidget(self.value_selector_2d, alignment=Qt.AlignLeft)
+
         layout.addLayout(selector_layout)
+        selector_layout.addWidget(plane_label, 0, Qt.AlignLeft)  # Aligné à gauche
+        selector_layout.addWidget(self.plane_selector_2d, 1, Qt.AlignLeft)  # Aligné à gauche
 
         # Figure et axes
         self.figure_2d = plt.figure(figsize=(12, 6))
@@ -319,11 +325,14 @@ class MagneticFieldApp(QMainWindow):
         # Filtrer les points selon le plan et la valeur
         epsilon = 1e-5  # Tolérance pour la comparaison
         if plane == 'x':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['x'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['x'], value, atol=epsilon)]
         elif plane == 'y':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['y'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['y'], value, atol=epsilon)]
         elif plane == 'z':
-            filtered_points = [p for p in self.simulation.points_haute_resolution if np.isclose(p['z'], value, atol=epsilon)]
+            filtered_points = [p for p in self.simulation.points_haute_resolution if
+                               np.isclose(p['z'], value, atol=epsilon)]
         else:
             filtered_points = []
 
@@ -358,12 +367,15 @@ class MagneticFieldApp(QMainWindow):
 
         # Interpoler les données sur la grille
         H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid), method='linear', fill_value=0)
+        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
+        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
 
         # Créer une nouvelle figure avec GridSpec
         self.figure_2d.clear()  # Effacer la figure existante
-        gs = GridSpec(1, 3, width_ratios=[4, 0.2, 4], figure=self.figure_2d)  # 3 colonnes : 4:0.2:4 proportions
+        gs = GridSpec(1, 3, width_ratios=[6, 0.4, 6], wspace=0.5,
+                      figure=self.figure_2d)  # Augmenter l'espacement horizontal encore davantage
 
         # Sous-plot pour le champ scalaire |H|
         ax1 = self.figure_2d.add_subplot(gs[0, 0])  # Colonne de gauche
@@ -378,7 +390,8 @@ class MagneticFieldApp(QMainWindow):
 
         # Sous-plot pour le champ vectoriel
         ax2 = self.figure_2d.add_subplot(gs[0, 2])  # Colonne de droite
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red', scale=20)
+        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
+                            scale=20)
         ax2.set_title(f"Direction du champ magnétique (H{axis1}, H{axis2})")
         ax2.set_xlabel(f'{axis1} (m)')
         ax2.set_ylabel(f'{axis2} (m)')
@@ -390,14 +403,16 @@ class MagneticFieldApp(QMainWindow):
         self.canvas_2d.draw()
 
 
+
     def add_tab_gaussian_and_radial(self):
         """Onglet 3 : Affichage du champ radial et de l'amplitude simulée avec sélecteur de plan."""
         tab = QWidget()
-        layout = QVBoxLayout()
+        layout = QVBoxLayout()  # Le layout principal du tab
         tab.setLayout(layout)
 
-        # Ajout des sélecteurs
+        # Layout pour les sélecteurs (plan et valeur)
         selector_layout = QHBoxLayout()
+        selector_layout.setContentsMargins(0, 0, 0, 0)  # Pas de marges autour du layout
 
         # Sélecteur de plan
         plane_label = QLabel("Plan:")
@@ -405,16 +420,30 @@ class MagneticFieldApp(QMainWindow):
         self.plane_selector_3d.addItems(['x', 'y', 'z'])
         self.plane_selector_3d.currentTextChanged.connect(self.update_plane_selector_3d_values)
 
+        # Ajuster les marges et espacement des widgets
+        plane_label.setContentsMargins(0, 0, 0, 0)
+        self.plane_selector_3d.setContentsMargins(0, 0, 0, 0)
+
         # Sélecteur de valeur
         value_label = QLabel("Valeur:")
         self.value_selector_3d = QComboBox()
         self.value_selector_3d.currentTextChanged.connect(self.update_tab_gaussian_and_radial)
 
-        selector_layout.addWidget(plane_label)
-        selector_layout.addWidget(self.plane_selector_3d)
-        selector_layout.addWidget(value_label)
-        selector_layout.addWidget(self.value_selector_3d)
+        # Ajuster les marges et espacement des widgets
+        value_label.setContentsMargins(0, 0, 0, 0)
+        self.value_selector_3d.setContentsMargins(0, 0, 0, 0)
+
+        # Ajouter le label et le sélecteur au layout
+        selector_layout.addWidget(plane_label, 0, Qt.AlignLeft)  # Aligné à gauche
+        selector_layout.addWidget(self.plane_selector_3d, 1, Qt.AlignLeft)  # Aligné à gauche
+        selector_layout.addWidget(value_label, 0, Qt.AlignLeft)  # Aligné à gauche
+        selector_layout.addWidget(self.value_selector_3d, 1, Qt.AlignLeft)  # Aligné à gauche
+
+        # Ajouter le layout des sélecteurs dans le layout principal
         layout.addLayout(selector_layout)
+
+        # Espacer les graphiques en ajoutant un espacement vertical
+        layout.addSpacing(10)  # Ajoute un espacement entre les sélecteurs et les graphiques
 
         # Figure
         self.figure_gaussian = plt.figure(figsize=(12, 6))
@@ -427,6 +456,7 @@ class MagneticFieldApp(QMainWindow):
         # Tracer initial
         self.update_tab_gaussian_and_radial()
 
+        # Ajouter l'onglet dans le widget parent
         self.tabs.addTab(tab, "Champ Amplitude et Vectoriel")
 
     def update_plane_selector_3d_values(self):
