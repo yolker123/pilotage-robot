@@ -264,7 +264,7 @@ class MagneticFieldApp(QMainWindow):
 
         ax2 = self.figure_2d.add_subplot(gs[0, 2])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red', scale=12)
-        ax2.set_title(f"Direction du champ magnétique (H{plane})")
+        ax2.set_title(f"Direction du champ magnétique sur le plan {plane}")
         ax2.set_xlabel(f'{plane} (m)')
         ax2.set_aspect('equal')
 
@@ -306,7 +306,7 @@ class MagneticFieldApp(QMainWindow):
 
         ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=12)
-        ax2.set_title(f"Champ vectoriel (H{plane})")
+        ax2.set_title(f"Champ vectoriel sur le plan {plane}")
         ax2.set_xlabel(f'{plane} (m)')
         ax2.set_aspect('equal')
 
