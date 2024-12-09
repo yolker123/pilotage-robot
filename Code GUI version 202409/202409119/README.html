@@ -1,0 +1,100 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"><head><style>body {
+   color: black;
+}
+</style>
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:xd_Signature msdt:dt="string"></mso:xd_Signature>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor msdt:dt="string">Zhen Lin</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor>
+<mso:Order msdt:dt="string">2300.00000000000</mso:Order>
+<mso:ComplianceAssetId msdt:dt="string"></mso:ComplianceAssetId>
+<mso:TemplateUrl msdt:dt="string"></mso:TemplateUrl>
+<mso:xd_ProgID msdt:dt="string"></mso:xd_ProgID>
+<mso:_ExtendedDescription msdt:dt="string"></mso:_ExtendedDescription>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author msdt:dt="string">Zhen Lin</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author>
+<mso:TriggerFlowInfo msdt:dt="string"></mso:TriggerFlowInfo>
+<mso:ContentTypeId msdt:dt="string">0x01010069FB1314C00F8143B3E44550C82F61F0</mso:ContentTypeId>
+<mso:_SourceUrl msdt:dt="string"></mso:_SourceUrl>
+<mso:_SharedFileIndex msdt:dt="string"></mso:_SharedFileIndex>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+<title></title></head><body><h1 id="outil-pour-piloter-les-bras-robot">Outil pour piloter les bras robot</h1>
+<h2 id="cr-dits">Crédits</h2>
+<p>développé par :</p>
+<ul>
+<li>Lisa Duterte, Romain Derrien, Clement Rouvier et Elsa Della Valle (BE 22-23)</li>
+<li>Hamid AJOUAOU, Roméo BOTULI-BUNDOL, Samuel DECAY et baptiste Saby (BE 23-24)</li>
+</ul>
+<h2 id="instalation">Instalation</h2>
+<p>L&#39;outil requiert :</p>
+<ul>
+<li>python 3.10 (développé sous 3.10.11)</li>
+<li>les packages :<ul>
+<li>PyQt5</li>
+<li>pyserial</li>
+<li>PyVISA</li>
+<li>pywin32</li>
+</ul>
+</li>
+<li>les logiciels :<ul>
+<li>RobX_1.28.20.1027.exe (logiciel de keolabs pour les librairies)</li>
+<li>activedsoinstaller.exe</li>
+<li>IviSharedComponents_300.exe</li>
+<li>lecroyscope.3.2.9.0-x64.msi
+visa530runtime.exe
+wavestudioinstaller64_8.7.0.5.exe
+pour le 5 axes (driver serial):<ul>
+<li>UC232A_Windows_Setup.exe
+pour le 6 axes (logiciels de denso pour controller leur robot, requiert une license):</li>
+<li>WINCAPS III v3.64.2 ou ultérieur</li>
+<li>ORiN2<br>De plus, l&#39;outil requiert une ip statique sur le port du PC.
+Pour cela :<ul>
+<li>chercher &quot;panneau de controle&quot; dans windows</li>
+<li>aller dans &quot;réseau et internet&quot;</li>
+<li>&quot;Réseau et centre de partage&quot;</li>
+<li>&quot;changer les option d&#39;adaptateur&quot;</li>
+<li>faire clique droit sur &quot;Ethernet&quot;</li>
+<li>cliquer sur &quot;propriétés&quot;</li>
+<li>cliquer sur &quot;Protocol Internet Version 4 (TCP/IPv4)&quot;</li>
+<li>cliquer sur &quot;propriétés&quot;</li>
+<li>selectionner &quot;utiliser l&#39;addresse ip suivante&quot;</li>
+<li>entrer &quot;192.168.30.33&quot; dans le champ &quot;addresse ip&quot; et &quot;255.255.255.0&quot; dans le champ &quot;masque sous réseau&quot;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="utilisation">Utilisation</h2>
+<p>Pour le robot DENSO 6 axes spécificquement, veuillez lancer wincaps III et se log en mode développer au préalable
+Pour utiliser l&#39;outil :</p>
+<ul>
+<li>brancher le robot allumé et l&#39;oscilloscpe à l&#39;ordinateur</li>
+<li><p>lancer le script MainWindow.py (se déplacer dans le dossier et faire ./MainWindow.py)  </p>
+</li>
+<li><p>dans le cas du 5 axes :</p>
+<ul>
+<li>ouvrir le menu déroulant et selectionner le port comm correspondant au robot</li>
+<li>cliquer sur 5 axes</li>
+</ul>
+</li>
+<li><p>dans le cas du 6 axes, cliquer sur 6 axes</p>
+</li>
+<li><p>initialiser l&#39;oscilloscope avec les boutons &quot;Oscilloscope COM Initialization&quot; et &quot;Setup Oscilloscope Parameters&quot;</p>
+</li>
+<li><p>initialiser le robot avec le bouton &quot;Robot Initialisation&quot;</p>
+</li>
+</ul>
+<p><img src="mainWindow.png" alt="image de la fenetre"></p>
+<p>Le robot DENSO est pilotable manuellement via le logiciel de keolabs, pour l&#39;utiliser, ouvrir un invite de commande dans le dossier &quot;C:/Program Files(x86)/KEOLABS/RobX/Bin&quot; et entrer la commande &quot;Rob6xManager P S192.168.30.34 DENSO VS-AV6&quot;</p>
+<h2 id="axes-de-d-veloppement">Axes de développement</h2>
+<ul>
+<li>ajouter une fonction qui prendrait 3 points (définisant un pavé) et 3 instervales (pour avoir le nombre de points par rangées) pour définir un set de points <ul>
+<li>par exemple, ((0, 0, 0), (10, 10, 0), (0, 0, 10), 1, 1, 1) définierait un cube de 10cm sur chaque axe avec un point de mesure tout les cm.</li>
+</ul>
+</li>
+<li>nettoyer le code de main window</li>
+<li>implémenter un traitement des données collectées lors de l&#39;aquisition</li>
+</ul>
+</body></html>
