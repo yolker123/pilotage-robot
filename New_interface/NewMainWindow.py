@@ -1,39 +1,35 @@
+import math
+import sys
 
-import tkinter as tk
-
-
+import numpy as np
 import serial  # pip install pyserial
 import serial.tools.list_ports
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt
-
-
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import (QMainWindow, QTabWidget, QVBoxLayout, QWidget,
+                             QHBoxLayout, QLabel, QComboBox, QPushButton, QSlider, QFrame)
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import special
-from matplotlib.gridspec import GridSpec
-import numpy as np
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import (QMainWindow, QTabWidget, QVBoxLayout, QWidget,
-    QHBoxLayout, QLabel, QComboBox, QPushButton, QSlider, QFrame
-)
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.constants import mu_0
 from scipy.integrate import quad
-import math
-
-from scipy.interpolate import griddata
 
 from magneticFieldSimulation import MagneticFieldSimulation
 
 """
  * @brief Search the list of USB devices connected to the computer
 """
+
+
 def find_USB_device():
-        myports = [tuple(p) for p in list(serial.tools.list_ports.comports())]
-        usb_port_list = [p[0:2] for p in myports]     #Prendre p[0], p[1], no need p[2], because myports has 3 string parts.use print to see the value of myports.
-                                                   #for ex. myports[0]=('COM4', 'Périphérique série USB (COM4)', 'USB VID:PID=8087:0ACA SER=05022016'), only take first 2 parts.
-                                                   # p[0:2] take only p[0] ET P[1] . no p[2].   0<=i<2
-        return usb_port_list
+    myports = [tuple(p) for p in list(serial.tools.list_ports.comports())]
+    usb_port_list = [p[0:2] for p in
+                     myports]  # Prendre p[0], p[1], no need p[2], because myports has 3 string parts.use print to see the value of myports.
+    # for ex. myports[0]=('COM4', 'Périphérique série USB (COM4)', 'USB VID:PID=8087:0ACA SER=05022016'), only take first 2 parts.
+    # p[0:2] take only p[0] ET P[1] . no p[2].   0<=i<2
+    return usb_port_list
+
 
 class MagneticFieldSimulation_brouillon(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -200,6 +196,7 @@ class MagneticFieldSimulation_brouillon(FigureCanvas):
             interpolated.append({'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz})
         return interpolated
 
+
 class Worker(QObject):
     point_generated = pyqtSignal(dict)
 
@@ -222,10 +219,10 @@ class Worker(QObject):
                     self.point_generated.emit(point)
                     # Calcul de chaque point et ajout dans le buffer
 
-
     def stop(self):
         """Arrêter le calcul du worker."""
         self.running = False
+
 
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -265,71 +262,37 @@ class MplCanvas(FigureCanvas):
         # Rafraîchir le canvas pour afficher les nouveaux points
         self.draw()
 
-class RobotInterface(QMainWindow):
+
+class MeasureInterface(QMainWindow):
+
     def __init__(self):
         super().__init__()
-        self.style_h1 = "font-size: 16pt; font-weight: bold; color: black;"
-        self.style_h2 = "font-size: 12pt; font-weight: bold; color: Red;"
+        self.interface = None
+        self.buttons = {"oscilloscope" : {}, "robot" : {}, "demo" : None}
+        self.style_h1 = "font-size: 14pt; font-weight: bold; color: black;"
+        self.style_h2 = "font-size: 10pt; font-weight: bold; color: Red;"
         self.speed_value = 1000  # Valeur initiale de la vitesse
-        self.init_ui()
+        self.createInterface()
 
-    def init_ui(self):
-        # Configuration de base de la fenêtre
-        self.setWindowTitle("Robot Bureau d'Étude")
+    def getInterface(self) -> QWidget:
+        return self.interface
 
-        self.showMaximized()
-        self.setStyleSheet("""
-            QPushButton {
-                padding: 8px;
-                border-radius: 4px;
-                background-color: #f3f4f6;
-            }
-            QPushButton:hover {
-                background-color: #e5e7eb;
-            }
-            QLabel {
-                font-size: 14px;
-            }
-            QFrame {
-                border-radius: 8px;
-                padding: 10px;
-            }
-        """)
+    def createInterface(self):
+        widget = QWidget()
+        layout = QHBoxLayout()
+        widget.setLayout(layout)
 
-        # Widget central
-        self.central_widget = QTabWidget()
-        self.setCentralWidget(self.central_widget)
+        left_ui_widget = self.create_left_ui_widget()
+        right_ui_widget = self.create_right_ui_widget()
 
-
-        # Tab1 - Measure
-        measure_widget = QWidget()
-        self.measure_tab_main_layout = QHBoxLayout(measure_widget)
-
-
-        self.init_ui_left_panel()
-        self.init_ui_right_panel()
+        layout.addWidget(left_ui_widget, stretch=4)
+        layout.addWidget(right_ui_widget, stretch=1)
 
         self.init_ui_status_bar()
-
-        # Tab 2 - Calculs
-        vert = QVBoxLayout()
-        # Initialise la simulation
-        self.simulation2 = MagneticFieldSimulation(resolution=3)
-        print(f"Nombre de points originaux: {len(self.simulation2.resultats)}")
-        print(f"Nombre de points interpolés: {len(self.simulation2.points_haute_resolution)}")
-
-        # Ajouter les onglets
-        self.tabs = QTabWidget()
-        self.add_tab_3d_vectors()
-        self.add_tab_2d_plane()
-        self.add_tab_gaussian_and_radial()
-
-        self.central_widget.addTab(measure_widget, "Measurement")
-        self.central_widget.addTab(self.tabs, "Calculs")
         self.connect_signals()
+        self.interface = widget
 
-    def init_ui_left_panel(self):
-        # === PANNEAU GAUCHE (Visualisation) ===
+    def create_left_ui_widget(self) -> QFrame:
         left_panel = QFrame()
         left_layout = QHBoxLayout(left_panel)
 
@@ -337,60 +300,64 @@ class RobotInterface(QMainWindow):
         self.simulation = MagneticFieldSimulation_brouillon(self, width=8, height=6, dpi=100)
         left_layout.addWidget(self.simulation)
 
-        self.measure_tab_main_layout.addWidget(left_panel, stretch=4)
+        # self.measure_tab_main_layout.addWidget(left_panel, stretch=4)
+        return left_panel
 
-
-    def init_ui_right_panel(self):
+    def create_right_ui_widget(self) -> QFrame:
         # === PANNEAU DROIT (Contrôles) ===
         right_panel = QFrame()
-        self.right_layout = QVBoxLayout(right_panel)
+        right_layout = QVBoxLayout(right_panel)
 
-        self.init_ui_right_panel_section_oscilloscope()
-        self.init_ui_right_panel_section_robot()
+        oscilloscope_layout = self.create_oscilloscope_widget()
+        robot_section = self.create_robot_widget()
 
+        right_layout.addWidget(oscilloscope_layout)
+        right_layout.addWidget(robot_section)
 
-        # --- Bouton DEMO ---
-        self.demo = QPushButton("Démo")
-        self.demo.setStyleSheet("""
-                  QPushButton {
-                      background-color: orange;
-                      color: white;
-                      font-weight: bold;
-                      padding: 16px;
-                  }
-                  QPushButton:hover {
-                      background-color: black;
-                  }
-              """)
-        self.right_layout.addWidget(self.demo)
+        self.buttons["demo"] = QPushButton("Démo")
+        self.buttons["demo"].setStyleSheet("""
+                    QPushButton {
+                        background-color: orange;
+                        color: white;
+                        font-weight: bold;
+                    }
+                    QPushButton:hover {
+                        background-color: black;
+                    }
+                """)
+        right_layout.addWidget(self.buttons["demo"])
 
         # Ajouter un espace extensible
-        self.right_layout.addStretch()
+        right_layout.addStretch()
 
-        self.measure_tab_main_layout.addWidget(right_panel, stretch=1)
+        # self.measure_tab_main_layout.addWidget(right_panel, stretch=1)
+        return right_panel
 
-    def init_ui_right_panel_section_oscilloscope(self):
+    def create_oscilloscope_widget(self) -> QWidget:
+        widget = QWidget()
         oscilloscope_layout = QVBoxLayout()
+        widget.setLayout(oscilloscope_layout)
 
         conn_title = QLabel("Oscilloscope")
         conn_title.setStyleSheet(self.style_h1)
         oscilloscope_layout.addWidget(conn_title)
 
-        self.oscilloscope_btn = QPushButton("Connecter Oscilloscope")
-        self.oscilloscope_btn.setStyleSheet("""
-                  QPushButton {
-                      background-color: #3b82f6;
-                      color: white;
-                  }
-                  QPushButton:hover {
-                      background-color: #2563eb;
-                  }
-              """)
-        oscilloscope_layout.addWidget(self.oscilloscope_btn)
-        self.right_layout.addLayout(oscilloscope_layout)
+        self.buttons["oscilloscope"]["connection"] = QPushButton("Connecter Oscilloscope")
+        self.buttons["oscilloscope"]["connection"].setStyleSheet("""
+                    QPushButton {
+                        background-color: #3b82f6;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #2563eb;
+                    }
+                """)
+        oscilloscope_layout.addWidget(self.buttons["oscilloscope"]["connection"])
 
+        # self.right_layout.addLayout(oscilloscope_layout)
+        return widget
 
-    def init_ui_right_panel_section_robot(self):
+    def create_robot_widget(self) -> QWidget:
         robot_title = QLabel("Robot")
         robot_title.setStyleSheet(self.style_h1)
 
@@ -405,20 +372,19 @@ class RobotInterface(QMainWindow):
         robot_list = QComboBox()
         robot_list.addItems(["Robot 5 axis", "Robot 6 axis"])
 
-        self.robot_connection_btn = QPushButton("Robot connection")
-        self.robot_connection_btn.setStyleSheet("""
-                  QPushButton {
-                      background-color: #3b82f6;
-                      color: white;
-                  }
-                  QPushButton:hover {
-                      background-color: #2563eb;
-                  }
-              """)
+        self.buttons["robot"]["connection"] = QPushButton("Robot connection")
+        self.buttons["robot"]["connection"].setStyleSheet("""
+                    QPushButton {
+                        background-color: #3b82f6;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #2563eb;
+                    }
+                """)
 
-
-        self.robot_home_position = QPushButton("Home position")
-        self.robot_home_position.setEnabled(False)
+        self.buttons["robot"]["home"] = QPushButton("Home position")
+        self.buttons["robot"]["home"].setEnabled(False)
 
         # --- Section Vitesse ---
         speed_frame = QFrame()
@@ -440,15 +406,14 @@ class RobotInterface(QMainWindow):
         # Amélioration du label de vitesse
         self.speed_value_label = QLabel(f"{self.speed_value} mm/s")
         self.speed_value_label.setStyleSheet("""
-                         QLabel {
-                             padding: 5px 10px;
-                             background-color: #e5e7eb;
-                             border-radius: 4px;
-                             min-width: 100px;
-                             text-align: center;
-                             font-weight: bold;
-                         }
-                     """)
+                           QLabel {
+                               background-color: #e5e7eb;
+                               border-radius: 4px;
+                               min-width: 100px;
+                               text-align: center;
+                               font-weight: bold;
+                           }
+                       """)
         self.speed_value_label.setAlignment(Qt.AlignCenter)
         # speed_control_layout.addWidget(self.speed_value_label, stretch=1)
 
@@ -461,15 +426,14 @@ class RobotInterface(QMainWindow):
         for text in speed_labels_text:
             label = QLabel(text)
             label.setStyleSheet("""
-                             QLabel {
-                                 color: #4b5563;
-                                 font-size: 12px;
-                             }
-                         """)
+                               QLabel {
+                                   color: #4b5563;
+                                   font-size: 12px;
+                               }
+                           """)
             label.setAlignment(Qt.AlignCenter)
             speed_labels.addWidget(label)
         speed_layout.addLayout(speed_labels)
-
 
         # --- Section Contrôle du Mouvement ---
         movement_frame = QFrame()
@@ -518,61 +482,58 @@ class RobotInterface(QMainWindow):
         save_load_layout.addWidget(self.load_btn)
         movement_layout.addLayout(save_load_layout)
 
-
         # --- Bouton d'arrêt d'urgence ---
         self.emergency_btn = QPushButton("ARRÊT D'URGENCE")
         self.emergency_btn.setStyleSheet("""
-                  QPushButton {
-                      background-color: #dc2626;
-                      color: white;
-                      font-weight: bold;
-                      padding: 16px;
-                  }
-                  QPushButton:hover {
-                      background-color: #b91c1c;
-                  }
-              """)
-
-
+                    QPushButton {
+                        background-color: #dc2626;
+                        color: white;
+                        font-weight: bold;
+                    }
+                    QPushButton:hover {
+                        background-color: #b91c1c;
+                    }
+                """)
+        widget = QWidget()
         robot_layout = QVBoxLayout()
+        widget.setLayout(robot_layout)
+
         robot_layout.addWidget(robot_title)
         robot_layout.addWidget(self.port_combo)
         robot_layout.addWidget(robot_list)
-        robot_layout.addWidget(self.robot_connection_btn)
-        robot_layout.addWidget(self.robot_home_position)
+        robot_layout.addWidget(self.buttons["robot"]["connection"])
+        robot_layout.addWidget(self.buttons["robot"]["home"])
         robot_layout.addWidget(speed_frame)
         robot_layout.addWidget(movement_frame)
         robot_layout.addWidget(self.emergency_btn)
 
-        self.right_layout.addLayout(robot_layout)
-
-
-
+        # self.right_layout.addLayout(robot_layout)
+        return widget
 
     def init_ui_status_bar(self):
         # --- Barre de statut ---
         self.status_bar = self.statusBar()
         self.status_bar.setStyleSheet("""
-                  QStatusBar {
-                      background-color: #1f2937;
-                      color: white;
-                  }
-              """)
+                    QStatusBar {
+                        background-color: #1f2937;
+                        color: white;
+                    }
+                """)
         self.status_bar.showMessage("État: Déconnecté")
 
     def connect_signals(self):
         # Connexion des boutons aux slots
-        self.oscilloscope_btn.clicked.connect(self.toggleOscilloscope)
-        self.robot_connection_btn.clicked.connect(self.toggleRobot)
-        self.robot_home_position.clicked.connect(self.goHome)
+        self.buttons["oscilloscope"]["connection"].clicked.connect(self.toggleOscilloscope)
+        self.buttons["robot"]["connection"].clicked.connect(self.toggleRobot)
+        self.buttons["robot"]["home"].clicked.connect(self.goHome)
         # self.emergency_btn.clicked.connect(self.emergencyStop)
         # self.save_btn.clicked.connect(self.savePosition)
         self.load_btn.clicked.connect(self.loadPosition)
         self.step_combo.currentIndexChanged.connect(self.updateStep)
         self.speed_slider.valueChanged.connect(self.updateSpeed)
-        self.demo.clicked.connect(self.start_demo)
+        self.buttons["demo"].clicked.connect(self.start_demo)
 
-
+    @pyqtSlot()
     def start_demo(self):
         # Worker et thread pour le calcul en parallèle
         self.worker = Worker(self.simulation)
@@ -623,16 +584,16 @@ class RobotInterface(QMainWindow):
             color = "#ef4444"  # rouge pour vitesse rapide
 
         self.speed_value_label.setStyleSheet(f"""
-                QLabel {{
-                    padding: 5px 10px;
-                    background-color: {color};
-                    color: white;
-                    border-radius: 4px;
-                    min-width: 100px;
-                    text-align: center;
-                    font-weight: bold;
-                }}
-            """)
+                  QLabel {{
+                      padding: 5px 10px;
+                      background-color: {color};
+                      color: white;
+                      border-radius: 4px;
+                      min-width: 100px;
+                      text-align: center;
+                      font-weight: bold;
+                  }}
+              """)
 
         # Mise à jour du statut
         self.status_bar.showMessage(f"Vitesse mise à jour : {value} mm/s", 2000)
@@ -642,32 +603,32 @@ class RobotInterface(QMainWindow):
         connected = self.oscilloscope_btn.text() == "Connecter Oscilloscope"
         self.oscilloscope_btn.setText("Déconnecter Oscilloscope" if connected else "Connecter Oscilloscope")
         self.oscilloscope_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #22c55e;
-                color: white;
-            }
-        """ if connected else """
-            QPushButton {
-                background-color: #3b82f6;
-                color: white;
-            }
-        """)
+              QPushButton {
+                  background-color: #22c55e;
+                  color: white;
+              }
+          """ if connected else """
+              QPushButton {
+                  background-color: #3b82f6;
+                  color: white;
+              }
+          """)
 
     @pyqtSlot()
     def toggleRobot(self):
         connected = self.robot_connection_btn.text() == "Connecter Robot"
         self.robot_connection_btn.setText("Déconnecter Robot" if connected else "Connecter Robot")
         self.robot_connection_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #22c55e;
-                color: white;
-            }
-        """ if connected else """
-            QPushButton {
-                background-color: #3b82f6;
-                color: white;
-            }
-        """)
+              QPushButton {
+                  background-color: #22c55e;
+                  color: white;
+              }
+          """ if connected else """
+              QPushButton {
+                  background-color: #3b82f6;
+                  color: white;
+              }
+          """)
         self.robot_home_position.setEnabled(connected)
         self.status_bar.showMessage(f"État: {'Connecté' if connected else 'Déconnecté'}")
 
@@ -697,349 +658,48 @@ class RobotInterface(QMainWindow):
         step_values = [1, 5, 10]
         self.step_value = step_values[index]
 
-    # calculs
-    def add_tab_3d_vectors(self):
-        """Onglet 1 : Affichage 3D des vecteurs."""
-        tab = QWidget()
-        layout = QVBoxLayout()
-        tab.setLayout(layout)
 
-        figure = plt.figure()
-        canvas = FigureCanvas(figure)
-        ax = figure.add_subplot(111, projection='3d')
+class RobotInterface(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
 
-        # Données pour les vecteurs
-        points = self.simulation2.resultats
-        points_interpolés = self.simulation2.points_haute_resolution
-        for point in points:
-            x, y, z = point['x'], point['y'], point['z']
-            Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            if x == 0:
-                ax.quiver(x, y, z, Hx, Hy, Hz, color='b', length=0.01, normalize=True)
-        print(f"Nombre de points interpolés pour vecteurs 3D: {len(points_interpolés)}")
-        for point in points_interpolés:
-            x, y, z = point['x'], point['y'], point['z']
-            Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            if x == 0:
-                ax.quiver(x, y, z, Hx, Hy, Hz, color='r', length=0.005, normalize=True)  # Réduire la longueur
+    def init_ui(self):
+        # Configuration de base de la fenêtre
+        self.setWindowTitle("Robot Bureau d'Étude")
 
-        ax.set_title("Vecteurs 3D du champ magnétique")
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
+        self.showMaximized()
+        self.setStyleSheet("""
+            QPushButton {
+                padding: 8px;
+                border-radius: 4px;
+                background-color: #f3f4f6;
+            }
+            QPushButton:hover {
+                background-color: #e5e7eb;
+            }
+            QLabel {
+                font-size: 14px;
+            }
+            QFrame {
+                border-radius: 8px;
+                padding: 10px;
+            }
+        """)
 
-        layout.addWidget(canvas)
-        self.tabs.addTab(tab, "Vecteurs 3D")
+        # Widget central
+        central_widget = QTabWidget()
+        self.setCentralWidget(central_widget)
 
-    def add_tab_2d_plane(self):
-        """Onglet 2 : Affichage 2D dans un plan avec sélecteur de plan."""
-        tab = QWidget()
-        layout = QVBoxLayout()
-        tab.setLayout(layout)
+        measure_interface = MeasureInterface()
+        # calculs_widget = self.createCalculsWidget()
 
-        # Ajout des sélecteurs
-        selector_layout = QHBoxLayout()
+        central_widget.addTab(measure_interface.getInterface(), "Measurement")
+        # central_widget.addTab(calculs_widget, "Calculs")
 
-        # Sélecteur de plan
-        plane_label = QLabel("Plan:")
-        self.plane_selector_2d = QComboBox()
-        self.plane_selector_2d.addItems(['x', 'y', 'z'])
-        self.plane_selector_2d.currentTextChanged.connect(self.update_plane_selector_2d_values)
 
-        # Sélecteur de valeur
-        value_label = QLabel("Valeur:")
-        self.value_selector_2d = QComboBox()
-        self.value_selector_2d.currentTextChanged.connect(self.update_tab_2d_plane)
-
-        selector_layout.addWidget(plane_label)
-        selector_layout.addWidget(self.plane_selector_2d)
-        selector_layout.addWidget(value_label)
-        selector_layout.addWidget(self.value_selector_2d)
-        layout.addLayout(selector_layout)
-
-        # Figure et axes
-        self.figure_2d = plt.figure(figsize=(12, 6))
-        self.canvas_2d = FigureCanvas(self.figure_2d)
-        self.axes_2d = self.figure_2d.subplots(1, 2)
-        layout.addWidget(self.canvas_2d)
-
-        # Initialiser les valeurs du sélecteur de valeurs
-        self.update_plane_selector_2d_values()
-
-        # Tracer initial
-        self.update_tab_2d_plane()
-
-        self.tabs.addTab(tab, "Champ dans le plan 2D")
-
-    def update_plane_selector_2d_values(self):
-        """Met à jour les valeurs disponibles dans le sélecteur de valeurs pour l'onglet 2."""
-        plane = self.plane_selector_2d.currentText()
-        # Réinitialiser le sélecteur de valeurs
-        self.value_selector_2d.blockSignals(True)  # Empêche le déclenchement de signaux lors de la mise à jour
-        self.value_selector_2d.clear()
-        if plane == 'x':
-            unique_values = sorted(np.unique([p['x'] for p in self.simulation2.points_haute_resolution]))
-        elif plane == 'y':
-            unique_values = sorted(np.unique([p['y'] for p in self.simulation2.points_haute_resolution]))
-        elif plane == 'z':
-            unique_values = sorted(np.unique([p['z'] for p in self.simulation2.points_haute_resolution]))
-        else:
-            unique_values = []
-        self.value_selector_2d.addItems([f"{v:.5f}" for v in unique_values])
-        self.value_selector_2d.blockSignals(False)  # Réactive les signaux
-
-        # Optionnel : définir une valeur par défaut
-        if unique_values:
-            self.value_selector_2d.setCurrentIndex(len(unique_values) // 2)  # Sélectionne le milieu par défaut
-
-    def update_tab_2d_plane(self):
-        """Met à jour les graphiques de l'onglet Champ dans le plan 2D selon le plan et la valeur sélectionnés."""
-
-        plane = self.plane_selector_2d.currentText()
-        if self.value_selector_2d.count() == 0:
-            return  # Aucun point à tracer
-        try:
-            value = float(self.value_selector_2d.currentText())
-        except ValueError:
-            return  # Valeur non valide
-
-        # Filtrer les points selon le plan et la valeur
-        epsilon = 1e-5  # Tolérance pour la comparaison
-        if plane == 'x':
-            filtered_points = [p for p in self.simulation2.points_haute_resolution if
-                               np.isclose(p['x'], value, atol=epsilon)]
-        elif plane == 'y':
-            filtered_points = [p for p in self.simulation2.points_haute_resolution if
-                               np.isclose(p['y'], value, atol=epsilon)]
-        elif plane == 'z':
-            filtered_points = [p for p in self.simulation2.points_haute_resolution if
-                               np.isclose(p['z'], value, atol=epsilon)]
-        else:
-            filtered_points = []
-
-        if not filtered_points:
-            print(f"Aucun point trouvé pour le plan {plane}={value}")
-            return
-
-        # Extraire les axes non-constantes
-        axes_vars = {'x': ['y', 'z'], 'y': ['x', 'z'], 'z': ['x', 'y']}
-        axis1, axis2 = axes_vars[plane]
-
-        coord1 = np.array([p[axis1] for p in filtered_points])
-        coord2 = np.array([p[axis2] for p in filtered_points])
-
-        H_total = np.sqrt(
-            np.array([p['Hx'] for p in filtered_points]) ** 2 +
-            np.array([p['Hy'] for p in filtered_points]) ** 2 +
-            np.array([p['Hz'] for p in filtered_points]) ** 2
-        )
-        H_component1 = np.array([p[f'H{axis1}'] for p in filtered_points])
-        H_component2 = np.array([p[f'H{axis2}'] for p in filtered_points])
-
-        # Calculer les vecteurs normalisés pour la direction
-        with np.errstate(divide='ignore', invalid='ignore'):
-            H_component1_normalized = np.where(H_total != 0, H_component1 / H_total, 0)
-            H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
-
-        # Créer une grille régulière
-        unique_coord1 = np.unique(coord1)
-        unique_coord2 = np.unique(coord2)
-        coord1_grid, coord2_grid = np.meshgrid(unique_coord1, unique_coord2)
-
-        # Interpoler les données sur la grille
-        H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-
-        # Créer une nouvelle figure avec GridSpec
-        self.figure_2d.clear()  # Effacer la figure existante
-        gs = GridSpec(1, 3, width_ratios=[4, 0.2, 4], figure=self.figure_2d)  # 3 colonnes : 4:0.2:4 proportions
-
-        # Sous-plot pour le champ scalaire |H|
-        ax1 = self.figure_2d.add_subplot(gs[0, 0])  # Colonne de gauche
-        contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
-        ax1.set_title(f"Norme du champ |H| ({axis1}, {axis2})")
-        ax1.set_xlabel(f'{axis1} (m)')
-        ax1.set_ylabel(f'{axis2} (m)')
-
-        # Ajouter une colorbar fine à côté de ax1
-        cbar_ax = self.figure_2d.add_subplot(gs[0, 1])  # Colonne étroite au centre
-        self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
-
-        # Sous-plot pour le champ vectoriel
-        ax2 = self.figure_2d.add_subplot(gs[0, 2])  # Colonne de droite
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
-                            scale=20)
-        ax2.set_title(f"Direction du champ magnétique (H{axis1}, H{axis2})")
-        ax2.set_xlabel(f'{axis1} (m)')
-        ax2.set_ylabel(f'{axis2} (m)')
-        ax2.set_xlim(coord1_grid.min(), coord1_grid.max())
-        ax2.set_ylim(coord2_grid.min(), coord2_grid.max())
-        ax2.set_aspect('equal')  # Assure que les axes ont la même échelle
-
-        # Rafraîchir le canvas
-        self.canvas_2d.draw()
-
-    def add_tab_gaussian_and_radial(self):
-        """Onglet 3 : Affichage du champ radial et de l'amplitude simulée avec sélecteur de plan."""
-        tab = QWidget()
-        layout = QVBoxLayout()
-        tab.setLayout(layout)
-
-        # Ajout des sélecteurs
-        selector_layout = QHBoxLayout()
-
-        # Sélecteur de plan
-        plane_label = QLabel("Plan:")
-        self.plane_selector_3d = QComboBox()
-        self.plane_selector_3d.addItems(['x', 'y', 'z'])
-        self.plane_selector_3d.currentTextChanged.connect(self.update_plane_selector_3d_values)
-
-        # Sélecteur de valeur
-        value_label = QLabel("Valeur:")
-        self.value_selector_3d = QComboBox()
-        self.value_selector_3d.currentTextChanged.connect(self.update_tab_gaussian_and_radial)
-
-        selector_layout.addWidget(plane_label)
-        selector_layout.addWidget(self.plane_selector_3d)
-        selector_layout.addWidget(value_label)
-        selector_layout.addWidget(self.value_selector_3d)
-        layout.addLayout(selector_layout)
-
-        # Figure
-        self.figure_gaussian = plt.figure(figsize=(12, 6))
-        self.canvas_gaussian = FigureCanvas(self.figure_gaussian)
-        layout.addWidget(self.canvas_gaussian)
-
-        # Initialiser les valeurs du sélecteur de valeurs
-        self.update_plane_selector_3d_values()
-
-        # Tracer initial
-        self.update_tab_gaussian_and_radial()
-
-        self.tabs.addTab(tab, "Champ Amplitude et Vectoriel")
-
-    def update_plane_selector_3d_values(self):
-        """Met à jour les valeurs disponibles dans le sélecteur de valeurs pour l'onglet 3."""
-        plane = self.plane_selector_3d.currentText()
-        # Réinitialiser le sélecteur de valeurs
-        self.value_selector_3d.blockSignals(True)  # Empêche le déclenchement de signaux lors de la mise à jour
-        self.value_selector_3d.clear()
-        if plane == 'x':
-            unique_values = sorted(np.unique([p['x'] for p in self.simulation2.points_haute_resolution]))
-        elif plane == 'y':
-            unique_values = sorted(np.unique([p['y'] for p in self.simulation2.points_haute_resolution]))
-        elif plane == 'z':
-            unique_values = sorted(np.unique([p['z'] for p in self.simulation2.points_haute_resolution]))
-        else:
-            unique_values = []
-        self.value_selector_3d.addItems([f"{v:.5f}" for v in unique_values])
-        self.value_selector_3d.blockSignals(False)  # Réactive les signaux
-
-        # Optionnel : définir une valeur par défaut
-        if unique_values:
-            self.value_selector_3d.setCurrentIndex(len(unique_values) // 2)  # Sélectionne le milieu par défaut
-
-    def update_tab_gaussian_and_radial(self):
-        """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel selon le plan et la valeur sélectionnés."""
-        plane = self.plane_selector_3d.currentText()
-        if self.value_selector_3d.count() == 0:
-            return  # Aucun point à tracer
-        try:
-            value = float(self.value_selector_3d.currentText())
-        except ValueError:
-            return  # Valeur non valide
-
-        # Filtrer les points selon le plan et la valeur
-        epsilon = 1e-5  # Tolérance pour la comparaison
-        if plane == 'x':
-            filtered_points = [p for p in self.simulation2.points_haute_resolution if
-                               np.isclose(p['x'], value, atol=epsilon)]
-        elif plane == 'y':
-            filtered_points = [p for p in self.simulation2.points_haute_resolution if
-                               np.isclose(p['y'], value, atol=epsilon)]
-        elif plane == 'z':
-            filtered_points = [p for p in self.simulation2.points_haute_resolution if
-                               np.isclose(p['z'], value, atol=epsilon)]
-        else:
-            filtered_points = []
-
-        if not filtered_points:
-            print(f"Aucun point trouvé pour le plan {plane}={value}")
-            return
-
-        # Extraire les axes non-constantes
-        axes_vars = {'x': ['y', 'z'], 'y': ['x', 'z'], 'z': ['x', 'y']}
-        axis1, axis2 = axes_vars[plane]
-
-        coord1 = np.array([p[axis1] for p in filtered_points])
-        coord2 = np.array([p[axis2] for p in filtered_points])
-
-        H_total = np.sqrt(
-            np.array([p['Hx'] for p in filtered_points]) ** 2 +
-            np.array([p['Hy'] for p in filtered_points]) ** 2 +
-            np.array([p['Hz'] for p in filtered_points]) ** 2
-        )
-        H_component1 = np.array([p[f'H{axis1}'] for p in filtered_points])
-        H_component2 = np.array([p[f'H{axis2}'] for p in filtered_points])
-
-        # Calculer les vecteurs normalisés pour la direction
-        with np.errstate(divide='ignore', invalid='ignore'):
-            H_component1_normalized = np.where(H_total != 0, H_component1 / H_total, 0)
-            H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
-
-        # Créer une grille régulière
-        unique_coord1 = np.unique(coord1)
-        unique_coord2 = np.unique(coord2)
-        coord1_grid, coord2_grid = np.meshgrid(unique_coord1, unique_coord2)
-
-        # Interpoler les données sur la grille
-        H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_normalized, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_normalized, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-
-        # Effacer la figure existante
-        self.figure_gaussian.clf()
-
-        # Utiliser GridSpec pour organiser les subplots
-        gs = self.figure_gaussian.add_gridspec(1, 2, width_ratios=[1, 1])
-
-        # **Graphique de gauche : Amplitude du vecteur H en 3D**
-        ax1 = self.figure_gaussian.add_subplot(gs[0, 0], projection='3d')
-
-        # Tracer la surface 3D
-        surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
-        ax1.set_title(f'Amplitude du champ magnétique |H| ({axis1}, {axis2})')
-        ax1.set_xlabel(f'{axis1} (m)')
-        ax1.set_ylabel(f'{axis2} (m)')
-        ax1.set_zlabel('Amplitude |H| (A/m)')
-        self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10, label='|H| (A/m)')
-
-        # **Graphique de droite : Champ Vectoriel 2D (Hy, Hz)**
-        ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
-
-        # Tracer le champ vectoriel avec coloration basée sur la magnitude
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, H_total_grid,
-                            cmap='inferno', scale=20, scale_units='width', angles='xy')
-        ax2.set_title(f"Champ vectoriel (H{axis1}, H{axis2})")
-        ax2.set_xlabel(f'{axis1} (m)')
-        ax2.set_ylabel(f'{axis2} (m)')
-        ax2.set_xlim(coord1_grid.min(), coord1_grid.max())
-        ax2.set_ylim(coord2_grid.min(), coord2_grid.max())
-        ax2.set_aspect('equal')  # Assure que les axes ont la même échelle
-        self.figure_gaussian.colorbar(quiver, ax=ax2, shrink=0.5, aspect=10, label='Magnitude |H| (A/m)')
-
-        # Rafraîchir le canvas
-        self.canvas_gaussian.draw()
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
-    import sys
-
     app = QApplication(sys.argv)
     window = RobotInterface()
     window.show()
