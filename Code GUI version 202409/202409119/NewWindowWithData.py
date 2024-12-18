@@ -1,4 +1,3 @@
-
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,45 +13,50 @@ from scipy.interpolate import griddata
 
 from MagneticFieldSimulation import MagneticFieldSimulation
 
-class MagneticFieldApp(QMainWindow):
+
+class MagneticFieldApp(QTabWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Simulation du Champ Magnétique")
-        self.setGeometry(100, 100, 1200, 800)
+        # self.setGeometry(100, 100, 1200, 800)
 
         # Initialise la simulation
         self.simulation = MagneticFieldSimulation(resolution=1)
         self.initUI()
 
-    def getWindow(self):
-        return self.tabs
-
     def initUI(self):
         # Création de la disposition principale
         self.tabs = QTabWidget()
-        self.setCentralWidget(self.tabs)
+        # self.setCentralWidget(self.tabs)
 
         # Ajouter les onglets
         self.add_tab_3d_vectors()
         self.add_tab_2d_plane()
         self.add_tab_gaussian_and_radial()
-        
+
     def set_resolution(self, resolution_value, dialog):
         try:
             resolution_value = int(resolution_value)
             self.simulation.resolution = resolution_value  # Modifier la résolution de la simulation
             self.simulation.augmenter_resolution(self.simulation.resultats)  # Augmenter la résolution
             self.update_all_graphs()  # Appeler une méthode pour rafraîchir les graphiques
-            dialog.accept()  # Fermer la fenêtre popup
+
+            self.update_plane_selector_2d_values()
+            self.update_plane_selector_3d_values()
+
+            self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
+            self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
+
+            dialog.accept()
             print(f"Résolution modifiée à : {resolution_value}")
         except ValueError:
             print("Veuillez entrer un nombre entier valide.")
-            
+
     def update_all_graphs(self):
         self.update_tab_2d_plane()  # Mettre à jour les graphiques 2D
         self.update_tab_gaussian_and_radial()  # Mettre à jour les graphiques 3D
         self.plot_3d_vectors()  # Mettre à jour les vecteurs 3D
-        
+
     def add_tab_3d_vectors(self):
         """Onglet 1 : Affichage 3D des vecteurs."""
         self.tab_3d = QWidget()  # Créer un attribut pour l'onglet afin de pouvoir le mettre à jour
@@ -69,11 +73,14 @@ class MagneticFieldApp(QMainWindow):
 
         # Ajouter le bouton pour modifier la résolution
         resolution_button = QPushButton("Modifier Résolution")
-        resolution_button.clicked.connect(self.open_resolution_dialog)
+        resolution_button.clicked.connect(self.test)
         layout.addWidget(resolution_button, alignment=Qt.AlignRight)
 
         layout.addWidget(self.canvas_3d)
         self.tabs.addTab(self.tab_3d, "Vecteurs 3D")
+
+    def test(self):
+        print("test")
 
     def plot_3d_vectors(self):
         """Dessine les vecteurs 3D dans l'onglet correspondant."""
@@ -123,7 +130,8 @@ class MagneticFieldApp(QMainWindow):
             canvas_attribute='canvas_gaussian'
         )
 
-    def add_tab_with_plane_selector(self, title, update_selector_function, update_plot_function, figure_attribute, canvas_attribute):
+    def add_tab_with_plane_selector(self, title, update_selector_function, update_plot_function, figure_attribute,
+                                    canvas_attribute):
         """Ajoute un onglet avec un sélecteur de plan et une figure."""
         tab = QWidget()
         layout = QVBoxLayout()
@@ -135,12 +143,12 @@ class MagneticFieldApp(QMainWindow):
         )
         selector_layout.addWidget(plane_label, 0, Qt.AlignLeft)
         selector_layout.addWidget(plane_selector, 1, Qt.AlignLeft)
-        
+
         # Ajouter le bouton pour modifier la résolution
         resolution_button = QPushButton("Modifier Résolution")
         resolution_button.clicked.connect(self.open_resolution_dialog)
         selector_layout.addWidget(resolution_button, alignment=Qt.AlignLeft)
-        
+
         layout.addLayout(selector_layout)
 
         # Initialiser les attributs pour les sélecteurs
@@ -186,8 +194,6 @@ class MagneticFieldApp(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_()
 
-
-        
     def create_plane_and_value_selectors(self, plane_callback, value_callback):
         """Crée les sélecteurs pour le plan et la valeur."""
         selector_layout = QHBoxLayout()
@@ -223,7 +229,13 @@ class MagneticFieldApp(QMainWindow):
         """Met à jour les valeurs disponibles dans le sélecteur de valeurs."""
         selector.blockSignals(True)
         selector.clear()
-        unique_values = sorted(np.unique([p[plane] for p in self.simulation.points_haute_resolution])) if plane in ['x', 'y', 'z'] else []
+        if plane in ['x', 'y', 'z']:
+            # Extraire les valeurs uniques arrondies
+            raw_values = [p[plane] for p in self.simulation.points_haute_resolution]
+            unique_values = sorted(np.unique([round(v, 5) for v in raw_values]))
+        else:
+            unique_values = []
+        print(unique_values)
         selector.addItems([f"{v:.5f}" for v in unique_values])
         selector.blockSignals(False)
 
@@ -251,8 +263,10 @@ class MagneticFieldApp(QMainWindow):
         coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
 
         H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid), method='linear', fill_value=0)
+        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
+        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
 
         self.figure_2d.clear()
         gs = self.figure_2d.add_gridspec(1, 3, width_ratios=[6, 0.4, 6])
@@ -266,7 +280,8 @@ class MagneticFieldApp(QMainWindow):
         self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
 
         ax2 = self.figure_2d.add_subplot(gs[0, 2])
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red', scale=12)
+        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
+                            scale=12)
         ax2.set_title(f"Direction du champ magnétique sur le plan {plane}")
         ax2.set_xlabel(f'{plane} (m)')
         ax2.set_aspect('equal')
@@ -277,7 +292,7 @@ class MagneticFieldApp(QMainWindow):
         """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
         plane = self.plane_selector_3d.currentText()
         if self.value_selector_3d.count() == 0:
-            return 
+            return
 
         try:
             value = float(self.value_selector_3d.currentText())
@@ -294,8 +309,10 @@ class MagneticFieldApp(QMainWindow):
         coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
 
         H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid), method='linear', fill_value=0)
+        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
+        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
 
         self.figure_gaussian.clear()
         gs = self.figure_gaussian.add_gridspec(1, 2, width_ratios=[1, 1])
@@ -340,10 +357,6 @@ class MagneticFieldApp(QMainWindow):
             H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
 
         return coord1, coord2, H_total, H_component1_normalized, H_component2_normalized
-    
-# Lancement de l'application
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#     main_window = MagneticFieldApp()
-#     main_window.show()
-#     sys.exit(app.exec_())
+
+    def getWindow(self):
+        return self.tabs

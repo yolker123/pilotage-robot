@@ -136,18 +136,16 @@ class MainWindow(QMainWindow):
         
         #prédicat pour savoir si l'oscilloscope peut mesurer
         self.canMeasure = False
-        
-        #window size
-        self.resize(1200, 1000)
-        self.setMinimumSize(1200,1000)   
-        self.setMaximumSize(1200, 1000)  #setMinimumSize() and setMaximumSize() have the same value. we cant change the window size.
-                                        #length = 1200, high = 800
+
+        self.showMaximized()
+
         self.portlist=find_USB_device()
         self.items=[p[1] for p in self.portlist]    #take only the p[1] (the second value) of each p in portlist to the list items[].
         self.items.append("Choice COM Port KEOLABS Robx")    #    add end list one item
         
         centralArea = QWidget()
-        centralArea.setStyleSheet("background: '#ECECEC'")     #  #ECECEC color gray
+        self.layout_central_V = QVBoxLayout(centralArea)
+        # centralArea.setStyleSheet("background: '#ECECEC'")     #  #ECECEC color gray
 
         tabs = QTabWidget()
         tabs.addTab(centralArea, "Mesures")
@@ -155,20 +153,25 @@ class MainWindow(QMainWindow):
         algo = mfa.getWindow()
         tabs.addTab(algo, "Algo")
         self.setCentralWidget(tabs)  # The defaut value of centralArea is set in self.resize(1200, 800)
-        
-        global left_widget
-        left_widget = QWidget(centralArea)   #create left_widget in centralArea (parent widget) 
-        left_widget.setGeometry(10, 10, 790, 750)  # start coordinate (10,10), length 790 height 750.
-        
-        right_widget = QWidget(centralArea)
-        right_widget.setGeometry(800, 0, 400, 1000)
 
-        bottom_widget = QWidget(centralArea)
-        bottom_widget.setGeometry(10, 800, 790, 200)
+        self.layout_central_top = QHBoxLayout()
+        self.layout_central_V.addLayout(self.layout_central_top, stretch=2)
+        self.left_widget = QWidget()
+        self.layout_central_top.addWidget(self.left_widget, stretch=2)
+
+        self.right_widget = QWidget()
+        self.layout_right_V = QVBoxLayout(self.right_widget)
+        self.layout_central_top.addWidget(self.right_widget, stretch=1)
+        # right_widget.setGeometry(800, 0, 400, 1000)
+
+        bottom_widget = QWidget()
+        self.layout_central_V.addWidget(bottom_widget, stretch=1)
+        # bottom_widget.setGeometry(10, 800, 790, 200)
         
         #------------------------COM Ports----------------------
-        port_widget = QWidget(right_widget)   #right_widget --> parent widget.
-        port_widget.setGeometry(0, 0, 400, 80)       
+        port_widget = QWidget()
+        self.layout_right_V.addWidget(port_widget)
+        # port_widget.setGeometry(0, 0, 400, 80)
         port_widget.selectlbl = QLabel("Select port:")  #creat a lable for select tool bar
         #label
         port_widget.typeBox=QComboBox()  # creat toolbar box
@@ -186,8 +189,9 @@ class MainWindow(QMainWindow):
         
         
         #------------------------Speed----------------------        
-        speed_widget = QWidget(right_widget)
-        speed_widget.setGeometry(0, 80, 400, 90)
+        speed_widget = QWidget()
+        self.layout_right_V.addWidget(speed_widget)
+        # speed_widget.setGeometry(0, 80, 400, 90)
                 
         #Slider speed
         title_speed = QLabel("Select speed:")
@@ -217,8 +221,9 @@ class MainWindow(QMainWindow):
 
 
         #------------------------Buttons----------------------
-        btn_widget = QWidget(right_widget)
-        btn_widget.setGeometry(0, 220, 400, 350)  #begin from (0,250) in right_widget, length 400 and height 250
+        btn_widget = QWidget()
+        self.layout_right_V.addWidget(btn_widget)
+        # btn_widget.setGeometry(0, 220, 400, 350)  #begin from (0,250) in right_widget, length 400 and height 250
         
         #button to connect oscilloscope
         self.buttonConnectOscilloscope = QPushButton(' Oscilloscope COM Initialization')
@@ -252,8 +257,9 @@ class MainWindow(QMainWindow):
         self.buttonRobot6Axes = QPushButton('Robot 6 axes')
         self.buttonRobot6Axes.clicked.connect(self.robotAxis6)   
         
-        btn_widgetAxes = QWidget(right_widget)
-        btn_widgetAxes.setGeometry(0, 170, 400, 50)
+        btn_widgetAxes = QWidget()
+        self.layout_right_V.addWidget(btn_widgetAxes)
+        # btn_widgetAxes.setGeometry(0, 170, 400, 50)
         grid_btnAxes = QGridLayout() # creat gridlayout
         grid_btnAxes.addWidget(self.buttonRobot5Axes, 0, 0)  # add widgets to ths gridlayout
         grid_btnAxes.addWidget(self.buttonRobot6Axes, 0, 1)
@@ -271,7 +277,7 @@ class MainWindow(QMainWindow):
         
         #------------------------Control widget----------------------
         self.ctrl_widget = QWidget(bottom_widget)
-        self.ctrl_widget.setGeometry(0, 0, 750, 150)  #begin from (0,250) in right_widget, length 400 and height 250.
+        # self.ctrl_widget.setGeometry(0, 0, 750, 150)  #begin from (0,250) in right_widget, length 400 and height 250.
         
         self.ctrl_title = QLabel("Robot movement control:")
 
@@ -469,22 +475,24 @@ class MainWindow(QMainWindow):
         #update the figure selected
         self.onFigureSelected()
         #------------------------Reference point coordinates----------------------
-        text_widget = QWidget(right_widget)
-        text_widget.setGeometry(0, 560, 550, 80)
+        text_widget = QWidget()
+        self.layout_right_V.addWidget(text_widget)
+        # text_widget.setGeometry(0, 560, 550, 80)
        
         grid = QGridLayout()
        
         text_widget.setLayout(grid)  # set grid QGridlayout to text_widget QWidget 
         
         
-        ptr_widget = QWidget(right_widget)
-        ptr_widget.setGeometry(0, 630, 400, 80)
+        # ptr_widget = QWidget(self.right_widget)
+        # ptr_widget.setGeometry(0, 630, 400, 80)
         
         # clicked OK button then goto validateCoordPt function
         
         #------------------------Validatation Text Box----------------------
-        validTextBox_widget = QWidget(right_widget)
-        validTextBox_widget.setGeometry(10, 710, 350, 100)
+        validTextBox_widget = QWidget()
+        self.layout_right_V.addWidget(validTextBox_widget)
+        # validTextBox_widget.setGeometry(10, 710, 350, 100)
         validTextBox_widget.setStyleSheet("border: 1px solid black;")
     
         grid = QVBoxLayout()   #creat a QVBoxLayout--> organizes your widgets vertically in this window.no need use QGridLayout()
@@ -495,8 +503,9 @@ class MainWindow(QMainWindow):
         validTextBox_widget.setLayout(grid)
         
         #------------------------Emergency STOP Button----------------------
-        STOP_widget = QWidget(right_widget)
-        STOP_widget.setGeometry(10, 810, 350, 200)
+        STOP_widget = QWidget()
+        self.layout_right_V.addWidget(STOP_widget)
+        # STOP_widget.setGeometry(10, 810, 350, 200)
         STOP_btn = QPushButton('Emergency STOP')
         STOP_btn.clicked.connect(self.EmergencyStop)  # when click the button, go to function EmergencyStop in the class
         STOP_btn.setStyleSheet("background-color: red;")
@@ -505,6 +514,7 @@ class MainWindow(QMainWindow):
         STOP_grid.addWidget(STOP_btn)
         STOP_widget.setLayout(STOP_grid)
         self.udpdateEnable() #udpdateEnable() is a class defined in line 929
+
 
     """
      * @brief activate the buttons
@@ -927,7 +937,7 @@ class MainWindow(QMainWindow):
                 w.hide()
                 
         
-        left_widget.setStyleSheet(self.getFigureList()[2][self.figureSelector.currentIndex()])
+        self.left_widget.setStyleSheet(self.getFigureList()[2][self.figureSelector.currentIndex()])
         self.udpdateEnable()
     
     """
