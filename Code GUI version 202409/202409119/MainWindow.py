@@ -22,6 +22,7 @@ from NewWindowWithData import MagneticFieldApp
 # from oscilloscopeAcquisition import *
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+ASSETS_FOLDER = "assets/"
 speed = 2000
 COM = "COM22"     # Port du cable#
 initOscilloscope_flag = False   
@@ -118,6 +119,7 @@ class MainWindow(QMainWindow):
         #change the title of the window
         self.setWindowTitle("Robot bureau d'étude")
         self.RobID = "DENSO"
+        # TODO : Remove this line
         # self.robot = createRobot(self.RobID)
         # ------------------- Definition of central point for acquisition ---
         self.x_ptr = 0   # point de reference  --prt. begin point of robort arm.
@@ -928,7 +930,7 @@ class MainWindow(QMainWindow):
         return [
             ['Manual Measure', 'NFC', 'EMVCO', 'Custom Cube', 'One point', 'Custom Cylinder','Semi-sphere'],
             [self.MeasureOscillo, self.nfc, self.emvco, self.customCube, self.MeasureOnePoint, self.customCylindre, self.customSemisphere],
-            ["image: url(./measure.png)", "image: url(./nfc.jpg)", "image: url(./emvco.jpg)", "image: url(./cube.png)", "image: url(./point.png)", "image: url(./point.png)", "image: url(./point.png)"]
+            [f"image: url({ASSETS_FOLDER}measure.png)", f"image: url({ASSETS_FOLDER}nfc.jpg)", f"image: url({ASSETS_FOLDER}emvco.jpg)", f"image: url({ASSETS_FOLDER}cube.png)", f"image: url({ASSETS_FOLDER}point.png)", f"image: url({ASSETS_FOLDER}point.png)", f"image: url({ASSETS_FOLDER}point.png)"]
         ]
     
     """
