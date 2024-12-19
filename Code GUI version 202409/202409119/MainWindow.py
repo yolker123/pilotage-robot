@@ -9,9 +9,7 @@
 #et entrer la commande "Rob6xManager P S192.168.30.34 DENSO VS-AV6"
 
 import sys
-from PyQt5.QtCore import *
 import serial,serial.tools.list_ports  #pip install pyserial
-from PyQt5.QtWidgets import *
 # from Robot import *
 # from aquisitionLoops import *
 # import pythoncom
@@ -21,6 +19,8 @@ from concurrent.futures import Future
 import time
 from MeasureSetupPopup import *
 from NewWindowWithData import MagneticFieldApp
+# from oscilloscopeAcquisition import *
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 speed = 2000
 COM = "COM22"     # Port du cable#
@@ -108,6 +108,9 @@ class MainWindow(QMainWindow):
     def handleExecuteFunction(self, func):
         func()
 
+    def testButton(self):
+        print("testButton")
+
     def __init__(self):
         super().__init__()
         self.executeFunction.connect(self.handleExecuteFunction)
@@ -150,8 +153,7 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         tabs.addTab(centralArea, "Mesures")
         mfa = MagneticFieldApp()
-        algo = mfa.getWindow()
-        tabs.addTab(algo, "Algo")
+        tabs.addTab(mfa, "Algo")
         self.setCentralWidget(tabs)  # The defaut value of centralArea is set in self.resize(1200, 800)
 
         self.layout_central_top = QHBoxLayout()
@@ -221,18 +223,51 @@ class MainWindow(QMainWindow):
 
 
         #------------------------Buttons----------------------
+
+        # ----- MOCHEEEEE ------
+        btn_widgetAxes2 = QWidget()
+        self.layout_right_V.addWidget(btn_widgetAxes2)
+        grid_btnAxes2 = QGridLayout() # creat gridlayout
+        self.buttons = None
+        self.buttonLecroy = QPushButton('Lecroy')
+        self.buttonLecroy.clicked.connect(self.lecroy)
+        self.buttonTektronix = QPushButton('Tektronix')
+        self.buttonTektronix.clicked.connect(self.tektronix)
+        grid_btnAxes2.addWidget(self.buttonLecroy , 0, 0)  # add widgets to ths gridlayout
+        grid_btnAxes2.addWidget(self.buttonTektronix, 0, 1)
+        btn_widgetAxes2.setLayout(grid_btnAxes2)
+        # ----------------------
+
         btn_widget = QWidget()
         self.layout_right_V.addWidget(btn_widget)
         # btn_widget.setGeometry(0, 220, 400, 350)  #begin from (0,250) in right_widget, length 400 and height 250
         
         #button to connect oscilloscope
         self.buttonConnectOscilloscope = QPushButton(' Oscilloscope COM Initialization')
-        self.buttonConnectOscilloscope.clicked.connect(self.initOscilloscope)     #when click buttonConnectOscilloscope, go to function initOscilloscope in the class, so self.initO.... , if function outside this class, no 'self.' 
-        
+        self.buttonConnectOscilloscope.clicked.connect(self.initOscilloscope)     #when click buttonConnectOscilloscope, go to function initOscilloscope in the class, so self.initO.... , if function outside this class, no 'self.'
+        self.buttonConnectOscilloscope.setEnabled(False)
+
         #button to open popup to setup measures
         self.buttonSetupOscilloscope = QPushButton('Setup Oscilloscope Parameters')
         self.buttonSetupOscilloscope.clicked.connect(self.setupMeasure)
         self.buttonSetupOscilloscope.setEnabled(False)
+
+        # button to select 5 axes robot
+        self.buttonRobot5Axes = QPushButton('Robot 5 axes')
+        self.buttonRobot5Axes.clicked.connect(self.robotAxis5)
+
+        # button to select 6 axes robot
+        self.buttonRobot6Axes = QPushButton('Robot 6 axes')
+        self.buttonRobot6Axes.clicked.connect(self.robotAxis6)
+
+        btn_widgetAxes = QWidget()
+        self.layout_right_V.addWidget(btn_widgetAxes)
+        # btn_widgetAxes.setGeometry(0, 170, 400, 50)
+        grid_btnAxes = QGridLayout() # creat gridlayout
+        grid_btnAxes.addWidget(self.buttonRobot5Axes, 0, 0)  # add widgets to ths gridlayout
+        grid_btnAxes.addWidget(self.buttonRobot6Axes, 0, 1)
+        btn_widgetAxes.setLayout(grid_btnAxes)       # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
+        # setLayout is to display the buttons, if not the button you set will not display on the screen
         
         #button to connect robot
         self.buttonConnectRobot = QPushButton('Robot Initialization')
@@ -248,25 +283,10 @@ class MainWindow(QMainWindow):
         self.buttonDisconnectRobot = QPushButton('Close Robot communication')
         self.buttonDisconnectRobot.clicked.connect(self.disconnect)
         self.buttonDisconnectRobot.setEnabled(False)
-        
-        #button to select 5 axes robot
-        self.buttonRobot5Axes = QPushButton('Robot 5 axes')
-        self.buttonRobot5Axes.clicked.connect(self.robotAxis5)
-        
-        #button to select 6 axes robot
-        self.buttonRobot6Axes = QPushButton('Robot 6 axes')
-        self.buttonRobot6Axes.clicked.connect(self.robotAxis6)   
-        
-        btn_widgetAxes = QWidget()
-        self.layout_right_V.addWidget(btn_widgetAxes)
-        # btn_widgetAxes.setGeometry(0, 170, 400, 50)
-        grid_btnAxes = QGridLayout() # creat gridlayout
-        grid_btnAxes.addWidget(self.buttonRobot5Axes, 0, 0)  # add widgets to ths gridlayout
-        grid_btnAxes.addWidget(self.buttonRobot6Axes, 0, 1)
-        btn_widgetAxes.setLayout(grid_btnAxes)       # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
-        # setLayout is to display the buttons, if not the button you set will not display on the screen
-        
+
+
         grid_btn = QGridLayout()  # creat gridlayout named grid_btn
+
         grid_btn.addWidget(self.buttonConnectOscilloscope, 0, 0)
         grid_btn.addWidget(self.buttonSetupOscilloscope, 1, 0)
         grid_btn.addWidget(self.buttonConnectRobot, 2, 0)
@@ -515,7 +535,17 @@ class MainWindow(QMainWindow):
         STOP_widget.setLayout(STOP_grid)
         self.udpdateEnable() #udpdateEnable() is a class defined in line 929
 
+    # ------ MOCHE ---------
+    def lecroy(self):
+        self.buttonLecroy.setEnabled(False)
+        self.buttonTektronix.setEnabled(True)
+        self.buttonConnectOscilloscope.setEnabled(True)
 
+    def tektronix(self):
+        self.buttonTektronix.setEnabled(False)
+        self.buttonLecroy.setEnabled(True)
+        self.buttonConnectOscilloscope.setEnabled(True)
+    # ----------------------
     """
      * @brief activate the buttons
     """ 

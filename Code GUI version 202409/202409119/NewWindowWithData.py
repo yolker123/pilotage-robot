@@ -14,22 +14,23 @@ from scipy.interpolate import griddata
 from MagneticFieldSimulation import MagneticFieldSimulation
 
 
-class MagneticFieldApp(QTabWidget):
+class MagneticFieldApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Simulation du Champ Magnétique")
-        # self.setGeometry(100, 100, 1200, 800)
 
-        # Initialise la simulation
+        # Layout principal
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+
+        # Ajout des onglets
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+
         self.simulation = MagneticFieldSimulation(resolution=1)
         self.initUI()
 
     def initUI(self):
-        # Création de la disposition principale
-        self.tabs = QTabWidget()
-        # self.setCentralWidget(self.tabs)
-
-        # Ajouter les onglets
         self.add_tab_3d_vectors()
         self.add_tab_2d_plane()
         self.add_tab_gaussian_and_radial()
@@ -73,14 +74,11 @@ class MagneticFieldApp(QTabWidget):
 
         # Ajouter le bouton pour modifier la résolution
         resolution_button = QPushButton("Modifier Résolution")
-        resolution_button.clicked.connect(self.test)
+        resolution_button.clicked.connect(self.open_resolution_dialog)
         layout.addWidget(resolution_button, alignment=Qt.AlignRight)
 
         layout.addWidget(self.canvas_3d)
         self.tabs.addTab(self.tab_3d, "Vecteurs 3D")
-
-    def test(self):
-        print("test")
 
     def plot_3d_vectors(self):
         """Dessine les vecteurs 3D dans l'onglet correspondant."""
@@ -357,6 +355,3 @@ class MagneticFieldApp(QTabWidget):
             H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
 
         return coord1, coord2, H_total, H_component1_normalized, H_component2_normalized
-
-    def getWindow(self):
-        return self.tabs
