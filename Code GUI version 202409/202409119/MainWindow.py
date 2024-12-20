@@ -19,8 +19,9 @@ from concurrent.futures import Future
 import time
 from MeasureSetupPopup import *
 from NewWindowWithData import MagneticFieldApp
+# TODO : uncomment
 # from oscilloscopeAcquisition import *
-from PyQt5 import QtCore, QtGui, QtWidgets
+from tektronix import *
 
 ASSETS_FOLDER = "assets/"
 speed = 2000
@@ -109,9 +110,6 @@ class MainWindow(QMainWindow):
     def handleExecuteFunction(self, func):
         func()
 
-    def testButton(self):
-        print("testButton")
-
     def __init__(self):
         super().__init__()
         self.executeFunction.connect(self.handleExecuteFunction)
@@ -119,8 +117,10 @@ class MainWindow(QMainWindow):
         #change the title of the window
         self.setWindowTitle("Robot bureau d'étude")
         self.RobID = "DENSO"
-        # TODO : Remove this line
+
+        # TODO: Remove the comment from the following line to enable robot functionality.
         # self.robot = createRobot(self.RobID)
+
         # ------------------- Definition of central point for acquisition ---
         self.x_ptr = 0   # point de reference  --prt. begin point of robort arm.
         self.y_ptr = 0     # unit mm
@@ -542,11 +542,13 @@ class MainWindow(QMainWindow):
         self.buttonLecroy.setEnabled(False)
         self.buttonTektronix.setEnabled(True)
         self.buttonConnectOscilloscope.setEnabled(True)
+        self.oscilloName = "lecroy"
 
     def tektronix(self):
         self.buttonTektronix.setEnabled(False)
         self.buttonLecroy.setEnabled(True)
         self.buttonConnectOscilloscope.setEnabled(True)
+        self.oscilloName = "tektronix"
     # ----------------------
     """
      * @brief activate the buttons
@@ -579,13 +581,20 @@ class MainWindow(QMainWindow):
      * @brief Initialise the connection to the oscilloscope
     """ 
     def initOscilloscope(self):
-        rm = oscilloscopeConnection(idOscilloscope)   # oscilloscopeConnection is a function in oscilloscopeAcquisition
-        #display the action on the specific Text Box
-        validationText.setText("Oscilloscope Connection: " + str(rm.list_resources()))  # settext is to write text in validationText
-        
-        #variable set to true in order to enable the setupOscilloscope fonction
-        self.buttonSetupOscilloscope.setEnabled(True)
-        self.buttonConnectOscilloscope.setEnabled(False)
+        if self.oscilloName == "tektronix":
+            # TODO : uncomment
+            # self.scope = tektronix_connection()
+            self.buttonSetupOscilloscope.setEnabled(True)
+            self.buttonConnectOscilloscope.setEnabled(False)
+        if self.buttonTektronix.isEnabled() and not self.buttonLecroy.isEnabled():
+            # rm = oscilloscopeConnection(idOscilloscope)   # oscilloscopeConnection is a function in oscilloscopeAcquisition
+            #display the action on the specific Text Boxt
+            # validationText.setText("Oscilloscope Connection: " + str(rm.list_resources()))  # settext is to write text in validationText
+
+            #variable set to true in order to enable the setupOscilloscope fonction
+            self.buttonSetupOscilloscope.setEnabled(True)
+            self.buttonConnectOscilloscope.setEnabled(False)
+
 
             
 
@@ -1249,11 +1258,19 @@ class MainWindow(QMainWindow):
     def setupMeasure(self):
         self.buttonSetupOscilloscope.setEnabled(False)
         self.centralWidget().setEnabled(False)
-        self.popup = MeasureSetupPopup()
+        self.popup = MeasureSetupPopup(self.oscilloName)
         self.popup.show()
         self.popup.onClose.connect(lambda: self.buttonSetupOscilloscope.setEnabled(True))
         def sendConfig(config):
-            setOscilloscopeParameters(config)
+            print(f"{self.oscilloName}")
+            print(f"CONF : {config}")
+            if self.oscilloName == "lecroy":
+                setOscilloscopeParameters(config)
+            if self.oscilloName == "tektronix":
+                # la config ressemble à ça : NF : [{'ch': 'C2', 'info': 'RMS'}, {'ch': 'C2', 'info': 'MEAN'}, {'ch': 'C1', 'info': 'AMPLITUDE'}]
+                # on veut : ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE", "FREQUENCY"]
+                self.measureTypes = []
+                self.id_map = tektronix_set_parameters(self.scope, self.measureTypes)
             self.centralWidget().setEnabled(True)
             self.canMeasure = True
             self.udpdateEnable()

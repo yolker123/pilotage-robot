@@ -7,13 +7,69 @@ from bddSetupOscilloscope import *
 global measure_config
 global wf_img_config #dictionnaire pour les acquisitions de waveform et d'image
 NB_MAX_P=8 #nombre maximal de P
+OPTIONS = {
+            "freq" : {
+                "lecroy" : "Frequency",
+                "tektronix" : "FREQUENCY"
+            },
+            "max" : {
+                "lecroy" : "Maximum",
+                "tektronix" : "MAXIMUM"
+            },
+            "min" : {
+                "lecroy" : "Minimum",
+                "tektronix" : "MINIMUM"
+            },
+            "ampl":{
+                "lecroy" : "Amplitude",
+                "tektronix" : "AMPLITUDE"
+            },
+        
+            "RMS" : {
+                "lecroy" : "RMS",
+                "tektronix" : "RMS"
+            },
+            "pkpk" : {
+                "lecroy" : "Pic To Pic",
+                "tektronix" : "PK2PK"
+            },
+            "period" : {
+                "lecroy" : "Period",
+                "tektronix" : "PERIOD"
+            },
+            "mean" : {
+                "lecroy" : "Mean",
+                "tektronix" : "MEAN"
+            },
+            
+            "duty cycle" : {
+                "lecroy" : "Duty Cycle"
+            },
+            "slew" : {
+                "lecroy" : "Slew"
+            },
+            "NBPW" : {
+                "lecroy" : "NBPW"
+            },
+            "rise28" : {
+                "lecroy" : "rise28"
+            },
+        
+            "PKS" : {
+                "lecroy" : "Number of Peaks"
+            },
+            "PNTS" : {
+                "lecroy" : "PKS"
+            }
+        
+        }
 
 class MeasureSetupPopup(QWidget):
     onClose = pyqtSignal()
     onValidate = pyqtSignal(object)
     
 
-    def __init__(self):
+    def __init__(self, oscilloName):
         QWidget.__init__(self)
         self.ch_grid = QGridLayout()
         self.opt_grid = QGridLayout()
@@ -37,69 +93,8 @@ class MeasureSetupPopup(QWidget):
         self.validateButton = QPushButton("Validate")
         self.validateButton.clicked.connect(self.validate)
         #'pkpk', 'ampl', 'delay', 'freq',  'period', 'max',   'min, 'RMS', 'mean', 'duty cycle', 'rise28',  , 'slew', 'NBPW' 'PKS', 'PNTS'
-        self.options = {
-            "freq" : {
-                "row" : 0,
-                "name" : "Frequency"
-            },
-            "max" : {
-                "row" : 0,
-                "name" : "Maximum"
-            },
-            "min" : {
-                "row" : 0,
-                "name" : "Minimum"
-            },
-            "ampl":{
-                "row" : 0,
-                "name" : "Amplitude"
-            },
         
-            "RMS" : {
-                "row" : 1,
-                "name" : "RMS"
-            },
-            "pkpk" : {
-                "row" : 1,
-                "name" : "Pic To Pic"
-            },
-            "period" : {
-                "row" : 1,
-                "name" : "Period"
-            },
-            "mean" : {
-                "row" : 1,
-                "name" : "Mean"
-            },
-            
-            "duty cycle" : {
-                "row" : 2,
-                "name" : "Duty Cycle"
-            },
-            "slew" : {
-                "row" : 2,
-                "name" : "Slew"
-            },
-            "NBPW" : {
-                "row" : 2,
-                "name" : "NBPW"
-            },
-            "rise28" : {
-                "row" : 2,
-                "name" : "rise28"
-            },
-        
-            "PKS" : {
-                "row" : 3,
-                "name" : "Number of Peaks"
-            },
-            "PNTS" : {
-                "row" : 3,
-                "name" : "PKS"
-            }
-        
-        }
-        
+
         #channel layout
         self.layout = QVBoxLayout()
         
@@ -109,13 +104,17 @@ class MeasureSetupPopup(QWidget):
             ]
         
         #options layout
-        opt_layout = self.buildRows(self.options)
+        self.oscilloName = oscilloName
+        opt_layout = self.buildRows()
+
+        print(f"OPTIONS: {OPTIONS}")
         
         for _, it in self.options.items():
-            sizePolicy = it["checkBox"].sizePolicy()
-            sizePolicy.setRetainSizeWhenHidden(True)
-            it["checkBox"].setSizePolicy(sizePolicy)
-            it["checkBox"].hide()
+            if it.get("checkBox"):
+                sizePolicy = it["checkBox"].sizePolicy()
+                sizePolicy.setRetainSizeWhenHidden(True)
+                it["checkBox"].setSizePolicy(sizePolicy)
+                it["checkBox"].hide()
         
         #waveform/image/validation layout
         self.cbImage = QCheckBox("Screenshot")
@@ -172,19 +171,29 @@ class MeasureSetupPopup(QWidget):
     """
      * @brief renvoie une matrice contenant les checkBox créée à partir d'un dictionnaire passé
     """
-    def buildRows(self, dictionnary):
-        rows = []
-        for key, value in dictionnary.items():
-            if value.get("row") is None:
-                value["row"] = 0
-            while len(rows) <= value["row"]:
-                rows.append([])
-            value["checkBox"] = QCheckBox(value["name"])
-            value["checkBox"].clicked.connect(self.onChangeValue)
-            rows[value["row"]].append(value["checkBox"])
-            
+
+    def buildRows(self):
+        rows = []  # Initialisation d'une liste vide
+        line = 0
+        col = 0
+        self.options = OPTIONS
+        for key, value in self.options.items():
+            if value.get(self.oscilloName):
+                if col > 2:
+                    col = 0
+                    line += 1
+
+                # Si la ligne n'existe pas encore dans rows, on l'initialise
+                if len(rows) <= line:
+                    rows.append([])
+
+                value["checkBox"] = QCheckBox(value.get('lecroy'))
+                value["checkBox"].clicked.connect(self.onChangeValue)
+                rows[line].append(value["checkBox"])
+                col += 1  # Avancer à la colonne suivante
+
         return rows
-    
+
     """
      * ajoute des None dans un tableau contenant des widgets devant prendre plusieurs cases d'une grid
     """
@@ -236,8 +245,9 @@ class MeasureSetupPopup(QWidget):
         self.cbWaveform.setChecked(wf_img_config.get(f"C{self.ch}").get("wf"))
 
         for k_opt, opt in self.options.items():
-            opt["checkBox"].setChecked(False)
-            opt["checkBox"].show()
+            if opt.get("checkBox"):
+                opt["checkBox"].setChecked(False)
+                opt["checkBox"].show()
                 
         for it in self.buttonCh:
             if self.buttonCh[channel] is it:
@@ -262,8 +272,10 @@ class MeasureSetupPopup(QWidget):
                 measure_config.pop(index)
         
         for k_opt, opt in self.options.items():
-            if opt["checkBox"].isChecked():
-                measure_config.append({"ch":f"C{channel+1}", "info": k_opt})
+            if opt.get("checkBox"):
+                print(f"{k_opt} : {opt.get(self.oscilloName)} / {opt.get('checkBox').isChecked()}")
+                if opt.get("checkBox").isChecked():
+                    measure_config.append({"ch":f"C{channel+1}", "info": opt.get(self.oscilloName)})
         self.changeChannel(channel)
         if len(measure_config) > NB_MAX_P:
             self.validateButton.setEnabled(False)
