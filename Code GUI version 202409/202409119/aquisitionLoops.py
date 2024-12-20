@@ -45,7 +45,7 @@ class Point:
     """
         * @brief Launch the acquisition of data on a given point
     """
-    def Acquire_point(self, robot, log_dir="logAcquisition", scope=None, measurementNumber=None):
+    def Acquire_point(self, robot, log_dir="logAcquisition", scope=None, measurementNumber=None, oscilloName=""):
         print(f"Acquiring {self.name}")
         if robot.type == "DENSO":
             err = robot.Energize(1)
@@ -58,12 +58,10 @@ class Point:
         time.sleep(timeToSleep)
 
         # TODO : MOCHE
-        self.oscilloName = ""
-        if self.oscilloName == "lecroy":
+        if oscilloName == "lecroy":
             getAcquisition(f"{self.name}", 0, log_dir)
-        if self.oscilloName == "tektronix":
-            tektronix_get_measures(scope, measurementNumber)
-            print("coucou")
+        if oscilloName == "tektronix":
+            tektronix_get_measures(scope, measurementNumber, self.x, self.y, self.z)
 
         print("aquired")
     
@@ -76,9 +74,9 @@ def createRobot(type):
     * @brief Launch the acquisition of data on each points of a given dataset
     * @param points: list of points to acquire
 """
-def Acquire_points(points, robot, x_ptr = None, y_ptr = None, z_ptr = None, log_dir="logAcquisition", scope=None, measurementNumber=None):
+def Acquire_points(points, robot, x_ptr = None, y_ptr = None, z_ptr = None, log_dir="logAcquisition", scope=None, measurementNumber=None, oscilloName=""):
     for point in points:
-        point.Acquire_point(robot, log_dir, scope, measurementNumber)
+        point.Acquire_point(robot, log_dir, scope, measurementNumber, oscilloName)
     if x_ptr == None or y_ptr == None or z_ptr == None:
         return
     timeout = 6000

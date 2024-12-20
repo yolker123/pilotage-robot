@@ -84,34 +84,34 @@ def tektronix_set_parameters(scope, config):
 
     # Ouvrir le fichier pour écrire l'en-tête
     with open(filename, 'w') as f:
-        headers = ["Timestamp", "Run"]
+        headers = ["Timestamp", "x", "y", "z"]
         headers += [f"{ch}_{mt}" for ch, mt in id_map]
         f.write(", ".join(headers) + "\n")
 
     return len(channels) * len(measureTypes)
 
 
-def tektronix_get_measures(scope, measurementNumber):
+def tektronix_get_measures(scope, measurementNumber, x, y, z):
     # Boucle de mesure
-    for run in range(num_runs):
-        print(f"Run {run + 1}/{num_runs}")
-        scope.commands.acquire.state.write("OFF")
-        time.sleep(0.2)
-        scope.commands.acquire.mode.write("Sample")
-        scope.commands.acquire.state.write("ON")
-        time.sleep(0.2)
-        scope.commands.acquire.state.write("OFF")
 
-        max_values = measure_channels(scope, measurementNumber)
+    # print(f"Run {run + 1}/{num_runs}")
+    scope.commands.acquire.state.write("OFF")
+    time.sleep(0.2)
+    scope.commands.acquire.mode.write("Sample")
+    scope.commands.acquire.state.write("ON")
+    time.sleep(0.2)
+    scope.commands.acquire.state.write("OFF")
 
-        # Obtenir l'horodatage actuel
-        timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+    max_values = measure_channels(scope, measurementNumber)
 
-        # Préparer la ligne à écrire
-        data_line = [timestamp, str(run + 1)] + max_values
-        data_line_str = ", ".join(map(str, data_line))
+    # Obtenir l'horodatage actuel
+    timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        with open(filename, 'a') as f:
-            f.write(data_line_str + "\n")
+    # Préparer la ligne à écrire
+    data_line = [timestamp, x, y, z] + max_values
+    data_line_str = ", ".join(map(str, data_line))
 
-        print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
+    with open(filename, 'a') as f:
+        f.write(data_line_str + "\n")
+
+    print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
