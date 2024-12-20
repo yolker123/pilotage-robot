@@ -3,7 +3,7 @@ from PyQt5.Qt import *
 from PyQt5.QtCore import *
 
 from bddSetupOscilloscope import *
-from tektronix import tektronix_connection
+from tektronix import *
 
 global measure_config
 global wf_img_config #dictionnaire pour les acquisitions de waveform et d'image
