@@ -3,6 +3,7 @@ from PyQt5.Qt import *
 from PyQt5.QtCore import *
 
 from bddSetupOscilloscope import *
+from tektronix import tektronix_connection
 
 global measure_config
 global wf_img_config #dictionnaire pour les acquisitions de waveform et d'image
@@ -71,6 +72,7 @@ class MeasureSetupPopup(QWidget):
 
     def __init__(self, oscilloName):
         QWidget.__init__(self)
+        self.scope = None
         self.ch_grid = QGridLayout()
         self.opt_grid = QGridLayout()
         self.btm_grid = QGridLayout()

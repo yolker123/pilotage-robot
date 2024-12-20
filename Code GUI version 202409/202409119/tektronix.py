@@ -1,3 +1,4 @@
+import atexit
 from datetime import datetime as dt
 import pyvisa
 from tm_devices import DeviceManager
@@ -12,34 +13,27 @@ visa_address = f"TCPIP::{OSCILLOSCOPE_IP}::INSTR"
 num_runs = 1
 current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
 # measurement_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE", "FREQUENCY"]
-channels = ['CH1', 'CH2', 'CH3']
+# channels = ['CH1', 'CH2', 'CH3']
 
-filename = os.path.join(
-    "C:", os.sep, "Users", "antho", "OneDrive - yncréa",
-    "Documents", "BE", "Code GUI version 202409",
-    "202409119", "Measure", f"MaxAmp_{current_time_str}.txt"
-)
+pwd = os.getcwd()
+filename = os.path.join(pwd, "Measure", f"MaxAmp_{current_time_str}.txt")
+print(f"FILENAME: {filename}")
 
 def tektronix_connection():
-    rm = pyvisa.ResourceManager()
     try:
-        oscilloscope = rm.open_resource(visa_address)
-        print(oscilloscope.query('*IDN?'))
-    except Exception as e:
-        print(f"Erreur lors de la connexion à l'oscilloscope : {e}")
-    finally:
-        # Toujours fermer le gestionnaire de ressources PyVISA
-        rm.close()
-
-    with DeviceManager(verbose=True) as device_manager:
-        # Activer la bibliothèque PyVISA-Py
+        device_manager = DeviceManager(verbose=False)
+        atexit.register(device_manager.close)
         device_manager.visa_library = PYVISA_PY_BACKEND
-        device_manager.setup_cleanup_enabled = True
-        device_manager.teardown_cleanup_enabled = True
+        device_manager.setup_cleanup_enabled = False
+        device_manager.teardown_cleanup_enabled = False
 
         scope: MSO6B = device_manager.add_scope(OSCILLOSCOPE_IP)
         print("Connected to:", scope.idn_string)
         return scope
+
+    except Exception as e:
+        print(f"Erreur lors de la connexion à l'oscilloscope : {e}")
+        return None
 
 
 # Fonction pour mesurer les tensions maximales
@@ -50,27 +44,54 @@ def measure_channels(scope, nb_measurements):
         max_values.append(max_voltage)
     return max_values
 
-def tektronix_set_parameters(scope, measurement_types):
-    # Connexion à l'oscilloscope et configuration
-    print("Connected to:", scope.idn_string)
+
+def tektronix_set_parameters(scope, config):
+    measureTypes = []
+    channels = []
+    for item in config:
+        ch = item.get('ch')  # Extract the channel
+        info = item.get('info')  # Extract the measurement info
+
+        channel_map = {
+            "C1": "CH1",
+            "C2": "CH2",
+            "C3": "CH3",
+            "C4": "CH4"
+        }
+        if ch is not None and info is not None:
+            # Add channel to channels list if it's not already there
+            if ch not in channels:
+                if ch in channel_map:
+                    channels.append(channel_map[ch])
+
+            # Add measurement type to measureTypes if it conforms to expected values
+            expected_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE",
+                              "FREQUENCY"]
+            if info in expected_types and info not in measureTypes:
+                measureTypes.append(info)
 
     # Configuration de l'oscilloscope
     id_map = []
-    for meas_type_index, meas_type in enumerate(measurement_types):
+    for meas_type_index, meas_type in enumerate(measureTypes):
         for channel_index, channel in enumerate(channels):
+            print(f"Configuration de la mesure {meas_type} sur le canal {channel}")
             unique_id = meas_type_index * len(channels) + channel_index + 1
+            print(f"ID unique : {unique_id}", meas_type, channel)
+            print(f"scope:{scope}")
             scope.add_new_measurement(f"MEAS{unique_id}", meas_type, channel)
             scope.commands.measurement.meas[unique_id].source.write(channel)
             id_map.append((channel, meas_type))
-    return id_map
 
-def tektronix_get_measures(scope, id_map, measurement_types):
     # Ouvrir le fichier pour écrire l'en-tête
     with open(filename, 'w') as f:
         headers = ["Timestamp", "Run"]
         headers += [f"{ch}_{mt}" for ch, mt in id_map]
         f.write(", ".join(headers) + "\n")
 
+    return len(channels) * len(measureTypes)
+
+
+def tektronix_get_measures(scope, measurementNumber):
     # Boucle de mesure
     for run in range(num_runs):
         print(f"Run {run + 1}/{num_runs}")
@@ -81,7 +102,7 @@ def tektronix_get_measures(scope, id_map, measurement_types):
         time.sleep(0.2)
         scope.commands.acquire.state.write("OFF")
 
-        max_values = measure_channels(scope, len(channels) * len(measurement_types))
+        max_values = measure_channels(scope, measurementNumber)
 
         # Obtenir l'horodatage actuel
         timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")

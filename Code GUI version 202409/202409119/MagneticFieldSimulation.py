@@ -7,52 +7,44 @@ import numpy as np
 import math
 
 class MagneticFieldSimulation:
-    def __init__(self, resolution=3, R=0.01, I=1.0):
-        self.R = R
-        self.I = I
+    def __init__(self, resolution=3, R=0.01):
+        self.file_path = "./data.txt"
+        self.S = math.pi * R ** 2
+        self.W = 2 * math.pi * 13.56e6
         self.resolution = resolution
-        self.mu0 = 4 * math.pi * 1e-7
+        self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
         self.resultats = []
         self.points_haute_resolution = []
-        self.generate_simulated_points()
+        self.read_file_and_calculate()
         self.augmenter_resolution(self.resultats)
 
-    def magnetic_field_helix(self, x, y, z):
-        """Calcule le champ magnétique d'une spire au point (x, y, z)."""
-        def dB_element(phi):
-            x0 = self.R * np.cos(phi)
-            y0 = self.R * np.sin(phi)
-            z0 = 0  # Spire dans le plan xy
-            r_vec = np.array([x - x0, y - y0, z - z0])
-            r_mag = np.linalg.norm(r_vec)
-            if r_mag == 0:  # Évite la singularité
-                return np.array([0, 0, 0])
-            dL = np.array([-self.R * np.sin(phi), self.R * np.cos(phi), 0])  # Direction du courant
-            dB = (mu_0 * self.I / (4 * np.pi)) * np.cross(dL, r_vec) / (r_mag ** 3)
-            return dB
+    def read_file_and_calculate(self):
+        """
+        Lit le fichier, calcule les champs magnétiques, et remplit la liste `resultats`.
+        """
+        data = np.loadtxt(self.file_path, delimiter=",", skiprows=1)  # Supposons une ligne d'en-tête
+        Ax, Ay, Az, x, y, z = data[:, 0], data[:, 1], data[:, 2], data[:, 3], data[:, 4], data[:, 5]
 
-        Bx, _ = quad(lambda phi: dB_element(phi)[0], 0, 2 * np.pi)
-        By, _ = quad(lambda phi: dB_element(phi)[1], 0, 2 * np.pi)
-        Bz, _ = quad(lambda phi: dB_element(phi)[2], 0, 2 * np.pi)
-        return np.array([Bx, By, Bz])
+        # Calcul de Bx, By, Bz
+        Bx = Ax / (self.S * self.W)
+        By = Ay / (self.S * self.W)
+        Bz = Az / (self.S * self.W)
 
-    def generate_simulated_points(self):
-        x_min, x_max = -0.1, 0.1
-        y_min, y_max = -0.1, 0.1
-        z_min, z_max = -0.1, 0.1
+        # Calcul de Hx, Hy, Hz
+        Hx = Bx / self.mu_0
+        Hy = By / self.mu_0
+        Hz = Bz / self.mu_0
 
-        self.resultats = [{'x': x, 'y': y, 'z': z} for x in np.linspace(x_min, x_max, 5)
-                          for y in np.linspace(y_min, y_max, 5)
-                          for z in np.linspace(z_min, z_max, 5)]
-
-        for point in self.resultats:
-            Bx, By, Bz = self.magnetic_field_helix(point['x'], point['y'], point['z'])
-            Hx, Hy, Hz = Bx / self.mu0, By / self.mu0, Bz / self.mu0
-            H_total = np.linalg.norm([Hx, Hy, Hz])
-            point.update({'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'H_total': H_total})
-        return self.resultats
-
-    
+        # Stocker les résultats dans une liste de dictionnaires
+        for i in range(len(x)):
+            self.resultats.append({
+                'x': x[i],
+                'y': y[i],
+                'z': z[i],
+                'Hx': Hx[i],
+                'Hy': Hy[i],
+                'Hz': Hz[i]
+            })
     def interpoler_trilineaire(self, sommets, u, v, w):
         """Interpolation trilineaire entre 8 sommets."""
         # Extraire Hx, Hy, Hz des sommets
