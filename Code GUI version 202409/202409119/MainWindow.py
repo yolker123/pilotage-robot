@@ -260,7 +260,7 @@ class MainWindow(QMainWindow):
         self.buttonTektronix.clicked.connect(self.tektronix_switch)
         grid_btnAxes2.addWidget(self.buttonLecroy, 0, 0)  # add widgets to ths gridlayout
         grid_btnAxes2.addWidget(self.buttonTektronix, 0, 1)
-        btn_widgetAxes2.setLayout(grid_btnAxes2)
+        # btn_widgetAxes2.setLayout(grid_btnAxes2)
         # ----------------------
 
         btn_widget = QWidget()
@@ -286,14 +286,13 @@ class MainWindow(QMainWindow):
         self.buttonRobot6Axes = QPushButton('Robot 6 axes')
         self.buttonRobot6Axes.clicked.connect(self.robotAxis6)
 
-        btn_widgetAxes = QWidget()
-        self.layout_right_V.addWidget(btn_widgetAxes)
+        # btn_widgetAxes = QWidget()
+        # self.layout_right_V.addWidget(btn_widgetAxes)
         # btn_widgetAxes.setGeometry(0, 170, 400, 50)
-        grid_btnAxes = QGridLayout()  # creat gridlayout
-        grid_btnAxes.addWidget(self.buttonRobot5Axes, 0, 0)  # add widgets to ths gridlayout
-        grid_btnAxes.addWidget(self.buttonRobot6Axes, 0, 1)
-        btn_widgetAxes.setLayout(
-            grid_btnAxes)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
+        grid_btnAxes2.addWidget(self.buttonRobot5Axes, 1, 0)  # add widgets to ths gridlayout
+        grid_btnAxes2.addWidget(self.buttonRobot6Axes, 1, 1)
+        btn_widgetAxes2.setLayout(
+            grid_btnAxes2)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
         # setLayout is to display the buttons, if not the button you set will not display on the screen
 
         # button to connect robot

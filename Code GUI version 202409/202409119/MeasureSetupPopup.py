@@ -140,6 +140,7 @@ class MeasureSetupPopup(QWidget):
                 # Crée la checkbox
                 checkbox_label = value.get("lecroy", key)
                 checkbox = QCheckBox(checkbox_label)
+                checkbox.setVisible(False)
                 checkbox.clicked.connect(self.onChangeValue)
                 self.opt_layout[line].append(checkbox)
                 self.opt_checkboxes[key] = checkbox  # Stocke la checkbox avec la clé de l'option
