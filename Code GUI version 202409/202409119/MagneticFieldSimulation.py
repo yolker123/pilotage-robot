@@ -1,5 +1,4 @@
 
-
 from scipy.constants import mu_0
 from scipy.integrate import quad
 import itertools
@@ -15,36 +14,51 @@ class MagneticFieldSimulation:
         self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
         self.resultats = []
         self.points_haute_resolution = []
-        self.read_file_and_calculate()
-        self.augmenter_resolution(self.resultats)
+        # self.read_file_and_calculate()
+        # self.augmenter_resolution(self.resultats)
 
-    def read_file_and_calculate(self):
-        """
-        Lit le fichier, calcule les champs magnétiques, et remplit la liste `resultats`.
-        """
-        data = np.loadtxt(self.file_path, delimiter=",", skiprows=1)  # Supposons une ligne d'en-tête
-        Ax, Ay, Az, x, y, z = data[:, 0], data[:, 1], data[:, 2], data[:, 3], data[:, 4], data[:, 5]
+    def read_file_and_calculate_point(self, line, columns):
+        # Définir les indices des colonnes que nous voulons extraire
+        try:
+            index_Ax = columns.index("CH1_Max_Voltage")
+            index_Ay = columns.index("CH2_Max_Voltage")
+            index_Az = columns.index("CH3_Max_Voltage")
+            index_x = columns.index("x")
+            index_y = columns.index("y")
+            index_z = columns.index("z")
+        except ValueError as e:
+            print(f"Erreur : Colonne manquante dans les données : {e}")
+            return
 
-        # Calcul de Bx, By, Bz
+        # Extraire les valeurs par index
+        values = line.split(',')
+        try:
+            Ax = float(values[index_Ax])
+            Ay = float(values[index_Ay])
+            Az = float(values[index_Az])
+            x = float(values[index_x])
+            y = float(values[index_y])
+            z = float(values[index_z])
+            print(f"Valeurs extraites : Ax={Ax}, Ay={Ay}, Az={Az}, x={x}, y={y}, z={z}")
+        except (IndexError, ValueError) as e:
+            # Gérer les erreurs possibles lors de l'extraction et conversion
+            print(f"Erreur lors de l'extraction des valeurs : {e}")
+            return
+
+        # Calculs
         Bx = Ax / (self.S * self.W)
         By = Ay / (self.S * self.W)
         Bz = Az / (self.S * self.W)
 
-        # Calcul de Hx, Hy, Hz
         Hx = Bx / self.mu_0
         Hy = By / self.mu_0
         Hz = Bz / self.mu_0
 
-        # Stocker les résultats dans une liste de dictionnaires
-        for i in range(len(x)):
-            self.resultats.append({
-                'x': x[i],
-                'y': y[i],
-                'z': z[i],
-                'Hx': Hx[i],
-                'Hy': Hy[i],
-                'Hz': Hz[i]
-            })
+        # Ajouter le résultat au tableau
+        self.resultats.append({
+            'x': x, 'y': y, 'z': z,
+            'Hx': Hx, 'Hy': Hy, 'Hz': Hz
+        })
     def interpoler_trilineaire(self, sommets, u, v, w):
         """Interpolation trilineaire entre 8 sommets."""
         # Extraire Hx, Hy, Hz des sommets
@@ -55,14 +69,14 @@ class MagneticFieldSimulation:
         # Formule d'interpolation trilineaire pour chaque composant
         def interp(values):
             return (
-                values[0] * (1 - u) * (1 - v) * (1 - w) +
-                values[1] * u * (1 - v) * (1 - w) +
-                values[2] * (1 - u) * v * (1 - w) +
-                values[3] * u * v * (1 - w) +
-                values[4] * (1 - u) * (1 - v) * w +
-                values[5] * u * (1 - v) * w +
-                values[6] * (1 - u) * v * w +
-                values[7] * u * v * w
+                    values[0] * (1 - u) * (1 - v) * (1 - w) +
+                    values[1] * u * (1 - v) * (1 - w) +
+                    values[2] * (1 - u) * v * (1 - w) +
+                    values[3] * u * v * (1 - w) +
+                    values[4] * (1 - u) * (1 - v) * w +
+                    values[5] * u * (1 - v) * w +
+                    values[6] * (1 - u) * v * w +
+                    values[7] * u * v * w
             )
 
         Hx_interp = interp(Hx)
@@ -75,36 +89,36 @@ class MagneticFieldSimulation:
         z_coords = [s['z'] for s in sommets]
 
         x_interp = (
-            x_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-            x_coords[1] * u * (1 - v) * (1 - w) +
-            x_coords[2] * (1 - u) * v * (1 - w) +
-            x_coords[3] * u * v * (1 - w) +
-            x_coords[4] * (1 - u) * (1 - v) * w +
-            x_coords[5] * u * (1 - v) * w +
-            x_coords[6] * (1 - u) * v * w +
-            x_coords[7] * u * v * w
+                x_coords[0] * (1 - u) * (1 - v) * (1 - w) +
+                x_coords[1] * u * (1 - v) * (1 - w) +
+                x_coords[2] * (1 - u) * v * (1 - w) +
+                x_coords[3] * u * v * (1 - w) +
+                x_coords[4] * (1 - u) * (1 - v) * w +
+                x_coords[5] * u * (1 - v) * w +
+                x_coords[6] * (1 - u) * v * w +
+                x_coords[7] * u * v * w
         )
 
         y_interp = (
-            y_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-            y_coords[1] * u * (1 - v) * (1 - w) +
-            y_coords[2] * (1 - u) * v * (1 - w) +
-            y_coords[3] * u * v * (1 - w) +
-            y_coords[4] * (1 - u) * (1 - v) * w +
-            y_coords[5] * u * (1 - v) * w +
-            y_coords[6] * (1 - u) * v * w +
-            y_coords[7] * u * v * w
+                y_coords[0] * (1 - u) * (1 - v) * (1 - w) +
+                y_coords[1] * u * (1 - v) * (1 - w) +
+                y_coords[2] * (1 - u) * v * (1 - w) +
+                y_coords[3] * u * v * (1 - w) +
+                y_coords[4] * (1 - u) * (1 - v) * w +
+                y_coords[5] * u * (1 - v) * w +
+                y_coords[6] * (1 - u) * v * w +
+                y_coords[7] * u * v * w
         )
 
         z_interp = (
-            z_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-            z_coords[1] * u * (1 - v) * (1 - w) +
-            z_coords[2] * (1 - u) * v * (1 - w) +
-            z_coords[3] * u * v * (1 - w) +
-            z_coords[4] * (1 - u) * (1 - v) * w +
-            z_coords[5] * u * (1 - v) * w +
-            z_coords[6] * (1 - u) * v * w +
-            z_coords[7] * u * v * w
+                z_coords[0] * (1 - u) * (1 - v) * (1 - w) +
+                z_coords[1] * u * (1 - v) * (1 - w) +
+                z_coords[2] * (1 - u) * v * (1 - w) +
+                z_coords[3] * u * v * (1 - w) +
+                z_coords[4] * (1 - u) * (1 - v) * w +
+                z_coords[5] * u * (1 - v) * w +
+                z_coords[6] * (1 - u) * v * w +
+                z_coords[7] * u * v * w
         )
 
         return {
@@ -115,8 +129,8 @@ class MagneticFieldSimulation:
             'Hy': Hy_interp,
             'Hz': Hz_interp
         }
-    
-    
+
+
     def augmenter_resolution(self, points):
         """Augmente la résolution de la grille avec interpolation trilineaire."""
         print(f"Nombre initial de points : {len(points)}")
@@ -167,7 +181,7 @@ class MagneticFieldSimulation:
                         H_total = np.linalg.norm([Hx, Hy, Hz])
                         interpolated_point.update({'H_total': H_total})
                         interpolated_points.append(interpolated_point)
-        
+
         print(f"Nombre de points interpolés : {len(interpolated_points)}")
 
         self.points_haute_resolution = interpolated_points

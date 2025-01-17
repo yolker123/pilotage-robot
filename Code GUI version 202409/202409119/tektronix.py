@@ -103,7 +103,7 @@ class Tektronix:
         time.sleep(0.2)
         self.scope.commands.acquire.state.write("OFF")
 
-        max_values = self.measure_channels(self.measurement_number)
+        max_values = self.measure_channels()
 
         # Obtenir l'horodatage actuel
         timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")

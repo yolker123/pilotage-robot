@@ -131,6 +131,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.tektronix = None
+        self.measurementNumber = None
+        self.scope = None
         self.executeFunction.connect(self.handleExecuteFunction)
         self.distanceMove = 5
         # change the title of the window
@@ -173,8 +176,9 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget()
         tabs.addTab(centralArea, "Mesures")
-        mfa = MagneticFieldApp()
-        tabs.addTab(mfa, "Algo")
+        self.mfa = MagneticFieldApp()
+        tabs.addTab(self.mfa, "Algo")
+
         self.setCentralWidget(tabs)  # The defaut value of centralArea is set in self.resize(1200, 800)
 
         self.layout_central_top = QHBoxLayout()
@@ -210,46 +214,6 @@ class MainWindow(QMainWindow):
         COM = port_widget.typeBox.currentIndexChanged.connect(self.valuePort)
         ##when release mouse, go to function valuePort in the class to get the current value
 
-
-
-        # ------------------------Buttons----------------------
-
-        # ----- MOCHEEEEE ------
-        btn_widgetAxes2 = QWidget()
-        self.layout_right_V.addWidget(btn_widgetAxes2)
-        grid_btnAxes2 = QGridLayout()  # creat gridlayout
-        self.buttons = None
-        self.buttonLecroy = QPushButton('Lecroy')
-        self.buttonLecroy.clicked.connect(self.lecroy)
-        self.buttonTektronix = QPushButton('Tektronix')
-        self.buttonTektronix.clicked.connect(self.tektronix)
-        grid_btnAxes2.addWidget(self.buttonLecroy, 0, 0)  # add widgets to ths gridlayout
-        grid_btnAxes2.addWidget(self.buttonTektronix, 0, 1)
-        btn_widgetAxes2.setLayout(grid_btnAxes2)
-        # ----------------------
-
-        btn_widget = QWidget()
-        self.layout_right_V.addWidget(btn_widget)
-        # btn_widget.setGeometry(0, 220, 400, 350)  #begin from (0,250) in right_widget, length 400 and height 250
-
-        # button to connect oscilloscope
-        self.buttonConnectOscilloscope = QPushButton(' Oscilloscope COM Initialization')
-        self.buttonConnectOscilloscope.clicked.connect(self.initOscilloscope)  # when click buttonConnectOscilloscope, go to function initOscilloscope in the class, so self.initO.... , if function outside this class, no 'self.'
-        self.buttonConnectOscilloscope.setEnabled(False)
-
-        # button to open popup to setup measures
-        self.buttonSetupOscilloscope = QPushButton('Setup Oscilloscope Parameters')
-        self.buttonSetupOscilloscope.clicked.connect(self.setupMeasure)
-        self.buttonSetupOscilloscope.setEnabled(False)
-
-        # button to select 5 axes robot
-        self.buttonRobot5Axes = QPushButton('Robot 5 axes')
-        self.buttonRobot5Axes.clicked.connect(self.robotAxis5)
-
-        # button to select 6 axes robot
-        self.buttonRobot6Axes = QPushButton('Robot 6 axes')
-        self.buttonRobot6Axes.clicked.connect(self.robotAxis6)
-
         # ------------------------Speed----------------------
         speed_widget = QWidget()
         self.layout_right_V.addWidget(speed_widget)
@@ -283,13 +247,53 @@ class MainWindow(QMainWindow):
 
         # fonction autosetup odcilloscope
 
+        # ------------------------Buttons----------------------
+
+        # ----- MOCHEEEEE ------
+        btn_widgetAxes2 = QWidget()
+        self.layout_right_V.addWidget(btn_widgetAxes2)
+        grid_btnAxes2 = QGridLayout()  # creat gridlayout
+        self.buttons = None
+        self.buttonLecroy = QPushButton('Lecroy')
+        self.buttonLecroy.clicked.connect(self.lecroy)
+        self.buttonTektronix = QPushButton('Tektronix')
+        self.buttonTektronix.clicked.connect(self.tektronix_switch)
+        grid_btnAxes2.addWidget(self.buttonLecroy, 0, 0)  # add widgets to ths gridlayout
+        grid_btnAxes2.addWidget(self.buttonTektronix, 0, 1)
+        btn_widgetAxes2.setLayout(grid_btnAxes2)
+        # ----------------------
+
+        btn_widget = QWidget()
+        self.layout_right_V.addWidget(btn_widget)
+        # btn_widget.setGeometry(0, 220, 400, 350)  #begin from (0,250) in right_widget, length 400 and height 250
+
+        # button to connect oscilloscope
+        self.buttonConnectOscilloscope = QPushButton(' Oscilloscope COM Initialization')
+        self.buttonConnectOscilloscope.clicked.connect(
+            self.initOscilloscope)  # when click buttonConnectOscilloscope, go to function initOscilloscope in the class, so self.initO.... , if function outside this class, no 'self.'
+        self.buttonConnectOscilloscope.setEnabled(False)
+
+        # button to open popup to setup measures
+        self.buttonSetupOscilloscope = QPushButton('Setup Oscilloscope Parameters')
+        self.buttonSetupOscilloscope.clicked.connect(self.setupMeasure)
+        self.buttonSetupOscilloscope.setEnabled(True)
+
+        # button to select 5 axes robot
+        self.buttonRobot5Axes = QPushButton('Robot 5 axes')
+        self.buttonRobot5Axes.clicked.connect(self.robotAxis5)
+
+        # button to select 6 axes robot
+        self.buttonRobot6Axes = QPushButton('Robot 6 axes')
+        self.buttonRobot6Axes.clicked.connect(self.robotAxis6)
+
         btn_widgetAxes = QWidget()
         self.layout_right_V.addWidget(btn_widgetAxes)
         # btn_widgetAxes.setGeometry(0, 170, 400, 50)
         grid_btnAxes = QGridLayout()  # creat gridlayout
         grid_btnAxes.addWidget(self.buttonRobot5Axes, 0, 0)  # add widgets to ths gridlayout
         grid_btnAxes.addWidget(self.buttonRobot6Axes, 0, 1)
-        btn_widgetAxes.setLayout(grid_btnAxes)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
+        btn_widgetAxes.setLayout(
+            grid_btnAxes)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
         # setLayout is to display the buttons, if not the button you set will not display on the screen
 
         # button to connect robot
@@ -563,7 +567,7 @@ class MainWindow(QMainWindow):
         self.buttonConnectOscilloscope.setEnabled(True)
         self.oscilloName = "lecroy"
 
-    def tektronix(self):
+    def tektronix_switch(self):
         self.buttonTektronix.setEnabled(False)
         self.buttonLecroy.setEnabled(True)
         self.buttonConnectOscilloscope.setEnabled(True)
@@ -604,9 +608,8 @@ class MainWindow(QMainWindow):
         if self.oscilloName == "tektronix":
             self.tektronix = Tektronix()
             self.tektronix.init_connection()
-            self.buttonSetupOscilloscope.setEnabled(True)
             self.buttonConnectOscilloscope.setEnabled(False)
-
+            self.buttonSetupOscilloscope.setEnabled(True)
         if self.buttonTektronix.isEnabled() and not self.buttonLecroy.isEnabled():
             rm = oscilloscopeConnection(
                 idOscilloscope)  # oscilloscopeConnection is a function in oscilloscopeAcquisition
@@ -629,7 +632,7 @@ class MainWindow(QMainWindow):
             getAcquisition("(0 0 0)", 0, log_dir)
             validationText.setText("Autosetup Done")
         if self.oscilloName == "tektronix":
-            self.tektronix.get_measures(0, 0, 0)
+            tektronix_get_measures(self.scope, self.measurementNumber)
 
     """
      * @brief Initialize the Robot position 
@@ -680,7 +683,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir)
+        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -714,7 +717,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir)
+        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -766,7 +769,7 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
 
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.mfa, self.measurementNumber, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -817,7 +820,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir)
+        Acquire_points(dataset, self.robot, x, y, z, log_dir,self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -860,7 +863,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir)
+        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -1346,7 +1349,8 @@ class MainWindow(QMainWindow):
             if self.oscilloName == "lecroy":
                 setOscilloscopeParameters(config)
             if self.oscilloName == "tektronix":
-                self.tektronix.set_parameters(config)
+                self.measurementNumber = self.tektronix.set_parameters(config)
+                print(self.measurementNumber)
 
             self.centralWidget().setEnabled(True)
             self.canMeasure = True

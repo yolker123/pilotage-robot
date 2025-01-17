@@ -45,7 +45,7 @@ class Point:
     """
         * @brief Launch the acquisition of data on a given point
     """
-    def Acquire_point(self, robot, log_dir="logAcquisition", oscilloName="", tektronix=None):
+    def Acquire_point(self, robot, mfa, log_dir="logAcquisition", scope=None, measurementNumber=None, oscilloName="", tektronix=None):
         print(f"Acquiring {self.name}")
         if robot.type == "DENSO":
             err = robot.Energize(1)
@@ -62,7 +62,13 @@ class Point:
             getAcquisition(f"{self.name}", 0, log_dir)
         if oscilloName == "tektronix":
             tektronix.get_measures(self.x, self.y, self.z)
-
+            #verifier si cest un maximum
+            # -> calcule Hx Hy Hz
+            mfa.simulation.resultats.append({
+                'x': self.x, 'y': self.y, 'z': self.z,
+                'Hx': 1, 'Hy': 1, 'Hz': 1
+            })
+            mfa.update_all_graphs()
         print("aquired")
     
 
@@ -74,9 +80,9 @@ def createRobot(type):
     * @brief Launch the acquisition of data on each points of a given dataset
     * @param points: list of points to acquire
 """
-def Acquire_points(points, robot, x_ptr = None, y_ptr = None, z_ptr = None, log_dir="logAcquisition", oscilloName="", tektronix=None):
+def Acquire_points(points, robot, mfa, x_ptr = None, y_ptr = None, z_ptr = None, log_dir="logAcquisition", scope=None, measurementNumber=None, oscilloName="", tektronix=None):
     for point in points:
-        point.Acquire_point(robot, log_dir, oscilloName, tektronix)
+        point.Acquire_point(robot, mfa, log_dir, scope, measurementNumber, oscilloName)
     if x_ptr == None or y_ptr == None or z_ptr == None:
         return
     timeout = 6000
