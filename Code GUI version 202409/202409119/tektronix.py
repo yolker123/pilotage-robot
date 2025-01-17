@@ -106,14 +106,14 @@ class Tektronix:
     def get_measures(self, x, y, z):
         # print(f"Run {run + 1}/{num_runs}")
         self.scope.commands.acquire.state.write("OFF")
-        time.sleep(0.2)
+        time.sleep(1)
         self.scope.commands.acquire.mode.write("Sample")
         self.scope.commands.acquire.state.write("ON")
-        time.sleep(0.2)
+        time.sleep(1)
         self.scope.commands.acquire.state.write("OFF")
 
         max_values = self.measure_channels()
-
+        print(max_values)
         # Obtenir l'horodatage actuel
         timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
 

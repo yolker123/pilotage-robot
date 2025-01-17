@@ -768,7 +768,7 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
 
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.mfa, self.measurementNumber, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
