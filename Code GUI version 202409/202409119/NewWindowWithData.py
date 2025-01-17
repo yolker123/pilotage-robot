@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QVBoxLayout, QWidget,
-    QHBoxLayout, QLabel, QComboBox, QPushButton, QFileDialog
+    QHBoxLayout, QLabel, QComboBox, QPushButton, QFileDialog, QRadioButton, QButtonGroup
 )
 from PyQt5.QtWidgets import QDialog, QLineEdit, QPushButton, QVBoxLayout, QFormLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -105,7 +105,7 @@ class MagneticFieldApp(QWidget):
         self.simulation.points_haute_resolution = []
         self.update_all_graphs()
 
-    def set_resolution(self, resolution_value, dialog):
+    def set_resolution(self, resolution_value, dialog, algorithm):
         try:
             resolution_value = int(resolution_value)
             self.simulation.resolution = resolution_value  # Modifier la résolution de la simulation
@@ -264,18 +264,47 @@ class MagneticFieldApp(QWidget):
         dialog.setWindowTitle("Modifier la Résolution")
 
         layout = QVBoxLayout()
+
         form_layout = QFormLayout()
 
         resolution_input = QLineEdit()
         resolution_input.setPlaceholderText("Entrez la nouvelle résolution")
-
         form_layout.addRow("Résolution :", resolution_input)
 
-        ok_button = QPushButton("OK")
-        ok_button.clicked.connect(lambda: self.set_resolution(resolution_input.text(), dialog))
+        # Create radio buttons for linearity selection
+        linear_button = QRadioButton("Linéaire")
+        nonlinear_button = QRadioButton("Non Linéaire")
+        form_layout.addRow(linear_button, nonlinear_button)
 
+        # Group the radio buttons
+        button_group = QButtonGroup()
+        button_group.addButton(linear_button)
+        button_group.addButton(nonlinear_button)
+
+        # Add to the main layout
         layout.addLayout(form_layout)
+
+        # Button to close the dialog
+        ok_button = QPushButton("OK")
+        ok_button.setEnabled(False)  # Initially disable the button
         layout.addWidget(ok_button)
+
+        # Enable the OK button only when a radio button is selected
+        def enable_ok_button():
+            if linear_button.isChecked() or nonlinear_button.isChecked():
+                ok_button.setEnabled(True)
+            else:
+                ok_button.setEnabled(False)
+
+        linear_button.toggled.connect(enable_ok_button)
+        nonlinear_button.toggled.connect(enable_ok_button)
+
+        def on_ok_clicked():
+            algorithm = "non-linear" if nonlinear_button.isChecked() else "linear"
+            self.set_resolution(resolution_input.text(), dialog, algorithm)
+            dialog.accept()
+
+        ok_button.clicked.connect(on_ok_clicked)
 
         dialog.setLayout(layout)
         dialog.exec_()
