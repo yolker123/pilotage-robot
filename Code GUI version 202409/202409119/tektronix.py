@@ -20,8 +20,12 @@ filename = os.path.join(pwd, "Measure", f"MaxAmp_{current_time_str}.txt")
 print(f"FILENAME: {filename}")
 
 class Tektronix:
+    def __init__(self):
+        self.measurement_number = None
+
     def init_connection(self):
         self.scope = None
+        self.measurement_number = 0
         while self.scope is None:
             try:
                 device_manager = DeviceManager(verbose=False)
@@ -47,52 +51,57 @@ class Tektronix:
             max_values.append(max_voltage)
         return max_values
 
-
     def set_parameters(self, config):
-        measure_types = []
-        channels = []
+        # Dictionnaires pour stocker les mesures par canal
+        channel_map = {
+            "C1": "CH1",
+            "C2": "CH2",
+            "C3": "CH3",
+            "C4": "CH4"
+        }
+
+        expected_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE", "FREQUENCY"]
+
+        # Dictionnaire pour stocker les mesures spécifiques à chaque canal
+        channel_measurements = {}
+
         for item in config:
-            ch = item.get('ch')  # Extract the channel
-            info = item.get('info')  # Extract the measurement info
+            ch = item.get('ch')
+            info = item.get('info')
 
-            channel_map = {
-                "C1": "CH1",
-                "C2": "CH2",
-                "C3": "CH3",
-                "C4": "CH4"
-            }
-            if ch is not None and info is not None:
-                # Add channel to channels list if it's not already there
-                if ch not in channels:
-                    if ch in channel_map:
-                        channels.append(channel_map[ch])
+            if ch in channel_map and info in expected_types:
+                mapped_channel = channel_map[ch]
+                if mapped_channel not in channel_measurements:
+                    channel_measurements[mapped_channel] = []
 
-                # Add measurement type to measureTypes if it conforms to expected values
-                expected_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE",
-                                  "FREQUENCY"]
-                if info in expected_types and info not in measure_types:
-                    measure_types.append(info)
+                if info not in channel_measurements[mapped_channel]:
+                    channel_measurements[mapped_channel].append(info)
 
-        # Configuration de l'oscilloscope
+        # Configurer l'oscilloscope et préparer l'enregistrement des mesures
+        unique_id = 1
         id_map = []
-        for meas_type_index, meas_type in enumerate(measure_types):
-            for channel_index, channel in enumerate(channels):
+
+        for channel, measures in channel_measurements.items():
+            for meas_type in measures:
                 print(f"Configuration de la mesure {meas_type} sur le canal {channel}")
-                unique_id = meas_type_index * len(channels) + channel_index + 1
                 print(f"ID unique : {unique_id}", meas_type, channel)
-                print(f"scope:{self.scope}")
+
                 self.scope.add_new_measurement(f"MEAS{unique_id}", meas_type, channel)
                 self.scope.commands.measurement.meas[unique_id].source.write(channel)
                 id_map.append((channel, meas_type))
+                unique_id += 1
 
         # Ouvrir le fichier pour écrire l'en-tête
         with open(filename, 'w') as f:
-            headers = ["Timestamp", "x", "y", "z"]
+            headers = ["Timestamp", "x", "y", "z"]  # Les en-têtes fixes
             headers += [f"{ch}_{mt}" for ch, mt in id_map]
             f.write(", ".join(headers) + "\n")
 
-        self.measurement_number = len(channels) * len(measure_types)
+        # Met à jour le nombre total de mesures configurées
+        self.measurement_number = len(id_map)
 
+        print("Configuration complétée :", channel_measurements)
+        print(f"Nombre total de mesures : {self.measurement_number}")
 
     def get_measures(self, x, y, z):
         # print(f"Run {run + 1}/{num_runs}")
