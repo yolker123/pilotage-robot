@@ -59,6 +59,8 @@ class MagneticFieldSimulation:
             'x': x, 'y': y, 'z': z,
             'Hx': Hx, 'Hy': Hy, 'Hz': Hz
         })
+        H = np.linalg.norm([Hx, Hy, Hz])
+        print(f"Résultat ajouté : {H} pour x={x}, y={y}, z={z}")
     def interpoler_trilineaire(self, sommets, u, v, w):
         """Interpolation trilineaire entre 8 sommets."""
         # Extraire Hx, Hy, Hz des sommets

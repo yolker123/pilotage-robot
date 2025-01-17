@@ -364,7 +364,15 @@ class MagneticFieldApp(QWidget):
             scatter = ax.scatter(coord1, coord2, c=H_total, cmap='viridis', edgecolor='k')
             ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=12)
             ax.set_title(f"Points sur le plan {plane}")
-            ax.set_xlabel(f'{plane} (m)')
+            if plane == "x":
+                ax.set_xlabel(f'y (m)')
+                ax.set_ylabel(f'z (m)')
+            if plane == "y":
+                ax.set_xlabel(f'x (m)')
+                ax.set_ylabel(f'z (m)')
+            if plane == "z":
+                ax.set_xlabel(f'x (m)')
+                ax.set_ylabel(f'y (m)')
             ax.set_ylabel('Other axis (m)')  # Change accordingly
             self.figure_2d.colorbar(scatter, ax=ax, label='|H| (A/m)')
             self.canvas_2d.draw()
@@ -383,14 +391,30 @@ class MagneticFieldApp(QWidget):
         ax1 = self.figure_2d.add_subplot(gs[0, 0])
         contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
         ax1.set_title(f"Norme du champ |H| ({plane})")
-        ax1.set_xlabel(f'{plane} (m)')
+        if plane == "x":
+            ax1.set_xlabel(f'y (m)')
+            ax1.set_ylabel(f'z (m)')
+        if plane == "y":
+            ax1.set_xlabel(f'x (m)')
+            ax1.set_ylabel(f'z (m)')
+        if plane == "z":
+            ax1.set_xlabel(f'x (m)')
+            ax1.set_ylabel(f'y (m)')
         cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
         self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
         ax2 = self.figure_2d.add_subplot(gs[0, 2])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
                             scale=12)
         ax2.set_title(f"Direction du champ magnétique sur le plan {plane}")
-        ax2.set_xlabel(f'{plane} (m)')
+        if plane == "x":
+            ax2.set_xlabel(f'y (m)')
+            ax2.set_ylabel(f'z (m)')
+        if plane == "y":
+            ax2.set_xlabel(f'x (m)')
+            ax2.set_ylabel(f'z (m)')
+        if plane == "z":
+            ax2.set_xlabel(f'x (m)')
+            ax2.set_ylabel(f'y (m)')
         ax2.set_aspect('equal')
         self.canvas_2d.draw()
 
@@ -419,7 +443,15 @@ class MagneticFieldApp(QWidget):
             ax1 = self.figure_gaussian.add_subplot(111, projection='3d')
             ax1.scatter(coord1, coord2, H_total, c=H_total, cmap='viridis', edgecolor='k', alpha=0.8)
             ax1.set_title(f"Points sur le plan {plane}")
-            ax1.set_xlabel(f'{plane} (m)')
+            if plane == "x":
+                ax1.set_xlabel(f'y (m)')
+                ax1.set_ylabel(f'z (m)')
+            if plane == "y":
+                ax1.set_xlabel(f'x (m)')
+                ax1.set_ylabel(f'z (m)')
+            if plane == "z":
+                ax1.set_xlabel(f'x (m)')
+                ax1.set_ylabel(f'y (m)')
             ax1.set_zlabel('Amplitude |H| (A/m)')
             self.canvas_gaussian.draw()
             return
@@ -438,14 +470,30 @@ class MagneticFieldApp(QWidget):
         ax1 = self.figure_gaussian.add_subplot(gs[0, 0], projection='3d')
         surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
         ax1.set_title(f'Amplitude du champ magnétique |H| ({plane})')
-        ax1.set_xlabel(f'{plane} (m)')
+        if plane == "x":
+            ax1.set_xlabel(f'y (m)')
+            ax1.set_ylabel(f'z (m)')
+        if plane == "y":
+            ax1.set_xlabel(f'x (m)')
+            ax1.set_ylabel(f'z (m)')
+        if plane == "z":
+            ax1.set_xlabel(f'x (m)')
+            ax1.set_ylabel(f'y (m)')
         ax1.set_zlabel('Amplitude |H| (A/m)')
         self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
 
         ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=12)
         ax2.set_title(f"Champ vectoriel sur le plan {plane}")
-        ax2.set_xlabel(f'{plane} (m)')
+        if plane == "x":
+            ax2.set_xlabel(f'y (m)')
+            ax2.set_ylabel(f'z (m)')
+        if plane == "y":
+            ax2.set_xlabel(f'x (m)')
+            ax2.set_ylabel(f'z (m)')
+        if plane == "z":
+            ax2.set_xlabel(f'x (m)')
+            ax2.set_ylabel(f'y (m)')
         ax2.set_aspect('equal')
 
         self.canvas_gaussian.draw()
