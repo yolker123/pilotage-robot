@@ -1,0 +1,4 @@
+(-1 0 0), time:13-41-00
+C1_freq:No Data Available
+
+C1_max:2.0050

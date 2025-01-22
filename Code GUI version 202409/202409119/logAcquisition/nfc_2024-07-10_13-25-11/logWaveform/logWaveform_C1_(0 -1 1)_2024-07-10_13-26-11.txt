@@ -1,0 +1,5 @@
+LECROYHDO6034,16324,Waveform
+Segments,1,SegmentSize,0
+Segment,TrigTime,TimeSinceSegment1
+#1,01-Jan-2000 00:00:00,0                 
+Time,Ampl
