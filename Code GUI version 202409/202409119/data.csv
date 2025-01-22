@@ -1,4 +1,4 @@
-CH1_Max_Voltage,CH2_Max_Voltage,CH3_Max_Voltage,x,y,z,h
+CH1_MAXIMUM,CH2_MAXIMUM,CH3_MAXIMUM,x,y,z,h
 1, 4, 5, 1, 1, 1, 7
 1, 1, 6, 1, 1, 2, 5
 2, 3, 7, 1, 1, 3, 6

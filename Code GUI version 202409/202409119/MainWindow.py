@@ -26,6 +26,8 @@ if os.name != 'posix':
     import win32com.client
     from oscilloscopeAcquisition import *
 
+from ConvertFormats import convert_formats
+
 ASSETS_FOLDER = "assets/"
 speed = 2000
 COM = "COM22"  # Port du cable#
@@ -770,7 +772,8 @@ class MainWindow(QMainWindow):
         self.robot.SetSpeed(speed)
 
         Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
-
+        if self.oscilloName == "lecroy":
+            convert_formats(log_dir, "Measure/measure.txt")
         def gui2():
             self.canMove = True
             self.buttonSetupOscilloscope.setEnabled(True)

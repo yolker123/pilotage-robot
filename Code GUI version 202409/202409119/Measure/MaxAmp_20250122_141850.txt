@@ -1,0 +1,1 @@
+Timestamp, x, y, z, CH1_FREQUENCY, CH1_MAXIMUM, CH1_PK2PK

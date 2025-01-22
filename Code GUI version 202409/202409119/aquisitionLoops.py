@@ -67,14 +67,15 @@ class Point:
             Hy = 0
             Hz = 0
             for value in values:
-                if value['value'] == "CH1_MAXIMUM":
-                    Bx = value['value'] / (mfa.simulation.S * mfa.simulation.omega)
+                if value['meas_type'] == "MAXIMUM" and value['channel'] == 'CH1':
+                    print("value CH :", value)
+                    Bx = float(value['value']) / (mfa.simulation.S * mfa.simulation.omega)
                     Hx = Bx / mfa.simulation.mu_0
-                if value['value'] == "CH2_MAXIMUM":
-                    By = value['value'] / (mfa.simulation.S * mfa.simulation.omega)
+                if value['meas_type'] == "MAXIMUM" and value['channel'] == 'CH2':
+                    By = float(value['value']) / (mfa.simulation.S * mfa.simulation.omega)
                     Hy = By / mfa.simulation.mu_0
-                if value['value'] == "CH3_MAXIMUM":
-                    Bz = value['value'] / (mfa.simulation.S * mfa.simulation.omega)
+                if value['meas_type'] == "MAXIMUM" and value['channel'] == 'CH3':
+                    Bz = float(value['value']) / (mfa.simulation.S * mfa.simulation.omega)
                     Hz = Bz / mfa.simulation.mu_0
             #verifier si cest un maximum
             # Ax, Ay, Az
