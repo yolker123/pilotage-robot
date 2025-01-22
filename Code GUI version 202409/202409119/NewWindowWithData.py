@@ -29,15 +29,14 @@ class MagneticFieldApp(QWidget):
         layout.addWidget(self.tabs)
 
         self.simulation = MagneticFieldSimulation(resolution=1)
-        print(self.simulation.resultats)
+        # print(self.simulation.resultats)
         print("ok")
 
         self.lines = None  # Store lines from file
         self.line_index = 0  # Line index
-        self.timer = QTimer()
         self.initUI()
         if self.simulation.resultats:
-            self.simulation.augmenter_resolution(self.simulation.resultats)  # Augmenter la résolution
+            self.simulation.augmenter_resolution(self.simulation.resultats, "linear")  # Augmenter la résolution
 
     def select_file(self):
         # Ouvrir une boîte de dialogue pour sélectionner un fichier
@@ -50,9 +49,6 @@ class MagneticFieldApp(QWidget):
             self.start_reading_file()  #
 
     def start_reading_file(self):
-        # Initialisation du temporisateur pour lire les lignes à intervalles
-        self.timer.timeout.connect(self.read_next_line)
-
         # Vérifier que le fichier peut être ouvert
         try:
             with open(self.simulation.file_path, 'r') as file:
@@ -71,8 +67,8 @@ class MagneticFieldApp(QWidget):
 
         # Afficher les lignes lues (pour vérification)
         print("Lignes lues du fichier :")
-        for line in lines:
-            print(line.strip())
+        # for line in lines:
+        #     print(line.strip())
 
         # Extraire l'en-tête pour les colonnes
         self.columns = lines[0].strip().split(',')
@@ -80,20 +76,16 @@ class MagneticFieldApp(QWidget):
 
         # Stocker le reste des lignes
         self.lines = lines[1:]  # Les données sans l'en-tête
-        self.line_index = 0  # Démarrer à la première ligne de données
 
-        # Démarrer le temporisateur
-        self.timer.start(2000)
-
-    def read_next_line(self):
-        if self.line_index < len(self.lines):
-            line = self.lines[self.line_index].strip()
+        # Process all lines at once
+        for line in self.lines:
+            line = line.strip()
             if line:
                 self.simulation.read_file_and_calculate_point(line, self.columns)
-                self.update_all_graphs()
-            self.line_index += 1
-        else:
-            self.timer.stop()
+
+        # Update all graphs after processing all lines
+        self.update_all_graphs()
+
 
     def initUI(self):
         self.add_tab_3d_vectors()
@@ -109,14 +101,15 @@ class MagneticFieldApp(QWidget):
         try:
             resolution_value = int(resolution_value)
             self.simulation.resolution = resolution_value  # Modifier la résolution de la simulation
-            self.simulation.augmenter_resolution(self.simulation.resultats)  # Augmenter la résolution
+            if algorithm == "linear":
+                self.simulation.augmenter_resolution(self.simulation.resultats, algorithm)  # Augmenter la résolution
+            else:
+                points_proches = self.simulation.selectionner_points_proches()
+                I_moyen = self.simulation.moyenne_I(points_proches)
+                print(I_moyen)
+                self.simulation.augmenter_resolution(self.simulation.resultats, algorithm, I_moyen)
+            print("calcul fini")
             self.update_all_graphs()  # Appeler une méthode pour rafraîchir les graphiques
-
-            self.update_plane_selector_2d_values()
-            self.update_plane_selector_3d_values()
-
-            self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
-            self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
 
             dialog.accept()
             print(f"Résolution modifiée à : {resolution_value}")

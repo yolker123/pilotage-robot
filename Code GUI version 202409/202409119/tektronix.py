@@ -125,3 +125,5 @@ class Tektronix:
             f.write(data_line_str + "\n")
 
         print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
+
+        return max_values
