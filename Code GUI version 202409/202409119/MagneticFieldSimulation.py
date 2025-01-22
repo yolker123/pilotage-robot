@@ -7,9 +7,11 @@ import math
 
 class MagneticFieldSimulation:
     def __init__(self, resolution=3, R=0.01):
-        self.file_path = "./data.txt"
+        self.c = 3e8  # Vitesse de la lumière en m/s
+        self.F = 13.56e6  # Fréquence en Hz
+        self.omega = 2 * math.pi * self.F  # Pulsation angulaire en rad/s
+        self.k = self.omega / self.c  # Nombre d'onde en rad/m
         self.S = math.pi * R ** 2
-        self.W = 2 * math.pi * 13.56e6
         self.resolution = resolution
         self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
         self.resultats = []
@@ -46,9 +48,9 @@ class MagneticFieldSimulation:
             return
 
         # Calculs
-        Bx = Ax / (self.S * self.W)
-        By = Ay / (self.S * self.W)
-        Bz = Az / (self.S * self.W)
+        Bx = Ax / (self.S * self.omega)
+        By = Ay / (self.S * self.omega)
+        Bz = Az / (self.S * self.omega)
 
         Hx = Bx / self.mu_0
         Hy = By / self.mu_0
@@ -61,79 +63,36 @@ class MagneticFieldSimulation:
         })
         H = np.linalg.norm([Hx, Hy, Hz])
         print(f"Résultat ajouté : {H} pour x={x}, y={y}, z={z}")
+
     def interpoler_trilineaire(self, sommets, u, v, w):
         """Interpolation trilineaire entre 8 sommets."""
-        # Extraire Hx, Hy, Hz des sommets
-        Hx = [s['Hx'] for s in sommets]
-        Hy = [s['Hy'] for s in sommets]
-        Hz = [s['Hz'] for s in sommets]
 
-        # Formule d'interpolation trilineaire pour chaque composant
-        def interp(values):
-            return (
-                    values[0] * (1 - u) * (1 - v) * (1 - w) +
-                    values[1] * u * (1 - v) * (1 - w) +
-                    values[2] * (1 - u) * v * (1 - w) +
-                    values[3] * u * v * (1 - w) +
-                    values[4] * (1 - u) * (1 - v) * w +
-                    values[5] * u * (1 - v) * w +
-                    values[6] * (1 - u) * v * w +
-                    values[7] * u * v * w
-            )
+        # Function to perform trilinear interpolation for a given set of values
+        def interpolate(values):
+            c00 = values[0] * (1 - u) + values[1] * u
+            c01 = values[2] * (1 - u) + values[3] * u
+            c10 = values[4] * (1 - u) + values[5] * u
+            c11 = values[6] * (1 - u) + values[7] * u
 
-        Hx_interp = interp(Hx)
-        Hy_interp = interp(Hy)
-        Hz_interp = interp(Hz)
+            c0 = c00 * (1 - v) + c01 * v
+            c1 = c10 * (1 - v) + c11 * v
 
-        # Calculer les coordonnées interpolées
-        x_coords = [s['x'] for s in sommets]
-        y_coords = [s['y'] for s in sommets]
-        z_coords = [s['z'] for s in sommets]
+            return c0 * (1 - w) + c1 * w
 
-        x_interp = (
-                x_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-                x_coords[1] * u * (1 - v) * (1 - w) +
-                x_coords[2] * (1 - u) * v * (1 - w) +
-                x_coords[3] * u * v * (1 - w) +
-                x_coords[4] * (1 - u) * (1 - v) * w +
-                x_coords[5] * u * (1 - v) * w +
-                x_coords[6] * (1 - u) * v * w +
-                x_coords[7] * u * v * w
-        )
+        # Interpolate Hx, Hy, Hz
+        Hx = interpolate([s['Hx'] for s in sommets])
+        Hy = interpolate([s['Hy'] for s in sommets])
+        Hz = interpolate([s['Hz'] for s in sommets])
 
-        y_interp = (
-                y_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-                y_coords[1] * u * (1 - v) * (1 - w) +
-                y_coords[2] * (1 - u) * v * (1 - w) +
-                y_coords[3] * u * v * (1 - w) +
-                y_coords[4] * (1 - u) * (1 - v) * w +
-                y_coords[5] * u * (1 - v) * w +
-                y_coords[6] * (1 - u) * v * w +
-                y_coords[7] * u * v * w
-        )
+        # Interpolate coordinates x, y, z
+        x = interpolate([s['x'] for s in sommets])
+        y = interpolate([s['y'] for s in sommets])
+        z = interpolate([s['z'] for s in sommets])
 
-        z_interp = (
-                z_coords[0] * (1 - u) * (1 - v) * (1 - w) +
-                z_coords[1] * u * (1 - v) * (1 - w) +
-                z_coords[2] * (1 - u) * v * (1 - w) +
-                z_coords[3] * u * v * (1 - w) +
-                z_coords[4] * (1 - u) * (1 - v) * w +
-                z_coords[5] * u * (1 - v) * w +
-                z_coords[6] * (1 - u) * v * w +
-                z_coords[7] * u * v * w
-        )
-
-        return {
-            'x': x_interp,
-            'y': y_interp,
-            'z': z_interp,
-            'Hx': Hx_interp,
-            'Hy': Hy_interp,
-            'Hz': Hz_interp
-        }
+        return {'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz}
 
 
-    def augmenter_resolution(self, points):
+    def augmenter_resolution(self, points, algorithm, I_moyen=0):
         """Augmente la résolution de la grille avec interpolation trilineaire."""
         print(f"Nombre initial de points : {len(points)}")
 
@@ -179,12 +138,119 @@ class MagneticFieldSimulation:
                         if (u == 0 and v == 0 and w == 0) or (u == 1 and v == 1 and w == 1):
                             continue
                         interpolated_point = self.interpoler_trilineaire(cube, u, v, w)
-                        Hx, Hy, Hz = interpolated_point['Hx'], interpolated_point['Hy'], interpolated_point['Hz']
-                        H_total = np.linalg.norm([Hx, Hy, Hz])
-                        interpolated_point.update({'H_total': H_total})
-                        interpolated_points.append(interpolated_point)
+                        if algorithm == "linear":
+                            Hx, Hy, Hz = interpolated_point['Hx'], interpolated_point['Hy'], interpolated_point['Hz']
+                            H_total = np.linalg.norm([Hx, Hy, Hz])
+                            interpolated_point.update({'H_total': H_total})
+                            interpolated_points.append(interpolated_point)
+                        else:
+                            x, y, z = interpolated_point['x'], interpolated_point['y'], interpolated_point['z']
+                            Hr = self.calculer_Hr(x, y, z, I_moyen)
+                            Htheta = self.calculer_Htheta(x, y, z, I_moyen)
+                            Hphi = 0  # D'après l'équation donnée
 
+                            r, theta, phi = self.calcul_r_teta_phi(x, y, z)
+                            Hx, Hy, Hz = self.convertir_spherique_to_cartesien(Hr, Htheta, Hphi, r, theta, phi)
+
+                            interpolated_points.append({'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz})
         print(f"Nombre de points interpolés : {len(interpolated_points)}")
 
         self.points_haute_resolution = interpolated_points
+
+# -----------------NONLINEAIRE
+    def calcul_r_teta_phi(self, x, y, z):
+        r = math.sqrt(x ** 2 + y ** 2 + z ** 2)
+        teta = math.acos(z / r) if r != 0 else 0.0
+        phi = math.atan2(y, x)
+        return r, teta, phi
+
+    def selectionner_points_proches(self):
+        for point in self.resultats:
+            point['r'] = math.sqrt(point['x'] ** 2 + point['y'] ** 2 + point['z'] ** 2)
+
+        points_tries = sorted(self.resultats, key=lambda point: point['r'])
+
+        points_proches = points_tries[:6]
+
+        print("Les 6 points proches les plus proches :")
+        for idx, point in enumerate(points_proches, start=1):
+            print(f"Point {idx}: {point}, Distance r: {point['r']}")
+
+        return points_proches
+
+    def moyenne_I(self, points_proches):
+        I_valeurs = []
+        print("Points proches", points_proches)
+        for point in points_proches:
+            print(point["x"], point["y"], point["z"])
+            r, teta, phi = self.calcul_r_teta_phi(point['x'], point['y'], point['z'])
+            H_r, H_theta, H_phi = self.convertir_cartesien_to_spherique(point['Hx'], point['Hy'], point['Hz'], teta,
+                                                                        phi)
+            print(teta)
+            I_r = self.calculer_I(H_r, r, teta)
+            I_theta = self.calculer_I_Htetha(H_theta, r, teta)
+            print(f"I_r: {I_r}, I_theta: {I_theta}")
+            I_valeurs.append((I_r + I_theta) / 2 if I_r and I_theta else (I_r or I_theta))
+        return sum(I_valeurs) / len(I_valeurs) if I_valeurs else None
+
+    def calculer_I(self, H_r, r, theta):
+        facteur1 = 1j / (self.k ** 2 * r ** 2)
+        facteur2 = 1 / (self.k ** 3 * r ** 3)
+
+        module_facteurs = math.sqrt(facteur1.real ** 2 + facteur1.imag ** 2) + math.sqrt(
+            facteur2.real ** 2 + facteur2.imag ** 2)
+
+        denominateur = self.S * (self.k ** 3) * module_facteurs * math.cos(theta)
+
+        res = (2 * math.pi * H_r / denominateur) if denominateur else None
+        return res
+
+    def calculer_I_Htetha(self, H_theta, r, theta):
+        sin_theta = np.sin(theta)
+
+        facteur = (-1 / (self.k * r)) + (1j / (self.k ** 2 * r ** 2)) + (1 / (self.k ** 3 * r ** 3))
+        module_facteur = math.sqrt(facteur.real ** 2 + facteur.imag ** 2)
+
+        denominateur = self.S * self.k ** 3 * module_facteur * sin_theta
+
+        res = (4 * np.pi * H_theta / denominateur) if sin_theta else None
+        return res
+
+    def calculer_Hr(self, x, y, z, I):
+        if x == 0 and y == 0 and z == 0:
+            return 0
+        r, theta, phi = self.calcul_r_teta_phi(x, y, z)
+
+        facteur = (1j / (self.k ** 2 * r ** 2) + 1 / (self.k ** 3 * r ** 3))
+
+        # Calculer le module du facteur
+        mod_facteur = math.sqrt(facteur.real ** 2 + facteur.imag ** 2)
+
+        Hr = (self.S * self.k ** 3 / (2 * np.pi)) * mod_facteur * np.cos(theta) * I
+        return Hr
+
+    def calculer_Htheta(self, x, y, z, I):
+        if x == 0 and y == 0 and z == 0:
+            return 0
+        r, theta, phi = self.calcul_r_teta_phi(x, y, z)
+
+        facteur = (-1 / (self.k * r) + 1j / (self.k ** 2 * r ** 2) + 1 / (self.k ** 3 * r ** 3))
+
+        # Calculer le module du facteur
+        mod_facteur = math.sqrt(facteur.real ** 2 + facteur.imag ** 2)
+
+        Htheta = (self.S * self.k ** 3 / (4 * np.pi)) * mod_facteur * np.sin(theta) * I
+        return Htheta
+
+    def convertir_spherique_to_cartesien(self, Hr, Htheta, Hphi, r, theta, phi):
+        x = Hr * np.sin(theta) * np.cos(phi) + Htheta * np.cos(theta) * np.cos(phi) - Hphi * np.sin(phi)
+        y = Hr * np.sin(theta) * np.sin(phi) + Htheta * np.cos(theta) * np.sin(phi) + Hphi * np.cos(phi)
+        z = Hr * np.cos(theta) - Htheta * np.sin(theta)
+        return x, y, z
+
+    def convertir_cartesien_to_spherique(self, Hx, Hy, Hz, theta, phi):
+        Hr = Hx * np.sin(theta) * np.cos(phi) + Hy * np.sin(theta) * np.sin(phi) + Hz * np.cos(theta)
+        Htheta = Hx * np.cos(theta) * np.cos(phi) + Hy * np.cos(theta) * np.sin(phi) - Hz * np.sin(theta)
+        Hphi = -Hx * np.sin(phi) + Hy * np.cos(phi)
+        return Hr, Htheta, Hphi
 

@@ -61,8 +61,17 @@ class Point:
         if oscilloName == "lecroy":
             getAcquisition(f"{self.name}", 0, log_dir)
         if oscilloName == "tektronix":
-            tektronix.get_measures(self.x, self.y, self.z)
+            max_values = tektronix.get_measures(self.x, self.y, self.z)
+            print(max_values)
             #verifier si cest un maximum
+            # Ax, Ay, Az
+            # Bx = Ax / (mfa.simulation.S * mfa.simulation.omega)
+            # By = Ay / (mfa.simulation.S * mfa.simulation.omega)
+            # Bz = Az / (mfa.simulation.S * mfa.simulation.omega)
+            #
+            # Hx = Bx / mfa.simulation.mu_0
+            # Hy = By / mfa.simulation.mu_0
+            # Hz = Bz / mfa.simulation.mu_0
             print("measure du point :", self.x, self.y, self.z)
             # -> calcule Hx Hy Hz
             mfa.simulation.resultats.append({
