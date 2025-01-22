@@ -22,6 +22,8 @@ print(f"FILENAME: {filename}")
 class Tektronix:
     def __init__(self):
         self.measurement_number = None
+        self.channel_measurements = None
+        self.id_map = []
 
     def init_connection(self):
         self.scope = None
@@ -45,11 +47,12 @@ class Tektronix:
 
     # Fonction pour mesurer les tensions maximales
     def measure_channels(self):
-        max_values = []
+        result = []
         for idx in range(self.measurement_number):
             max_voltage = self.scope.commands.measurement.meas[idx + 1].results.allacqs.mean.query()
-            max_values.append(max_voltage)
-        return max_values
+            channel, meas_type = self.id_map[idx]
+            result.append({"channel": channel, "meas_type": meas_type, "value": max_voltage})
+        return result
 
     def set_parameters(self, config):
         # Dictionnaires pour stocker les mesures par canal
@@ -63,7 +66,7 @@ class Tektronix:
         expected_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE", "FREQUENCY"]
 
         # Dictionnaire pour stocker les mesures spécifiques à chaque canal
-        channel_measurements = {}
+        self.channel_measurements = {}
 
         for item in config:
             ch = item.get('ch')
@@ -71,24 +74,24 @@ class Tektronix:
 
             if ch in channel_map and info in expected_types:
                 mapped_channel = channel_map[ch]
-                if mapped_channel not in channel_measurements:
-                    channel_measurements[mapped_channel] = []
+                if mapped_channel not in self.channel_measurements:
+                    self.channel_measurements[mapped_channel] = []
 
-                if info not in channel_measurements[mapped_channel]:
-                    channel_measurements[mapped_channel].append(info)
+                if info not in self.channel_measurements[mapped_channel]:
+                    self.channel_measurements[mapped_channel].append(info)
 
         # Configurer l'oscilloscope et préparer l'enregistrement des mesures
         unique_id = 1
-        id_map = []
+        self.id_map = []
 
-        for channel, measures in channel_measurements.items():
+        for channel, measures in self.channel_measurements.items():
             for meas_type in measures:
                 print(f"Configuration de la mesure {meas_type} sur le canal {channel}")
                 print(f"ID unique : {unique_id}", meas_type, channel)
 
                 self.scope.add_new_measurement(f"MEAS{unique_id}", meas_type, channel)
                 self.scope.commands.measurement.meas[unique_id].source.write(channel)
-                id_map.append((channel, meas_type))
+                self.id_map.append((channel, meas_type))
                 unique_id += 1
 
         # Ouvrir le fichier pour écrire l'en-tête
@@ -100,7 +103,7 @@ class Tektronix:
         # Met à jour le nombre total de mesures configurées
         self.measurement_number = len(id_map)
 
-        print("Configuration complétée :", channel_measurements)
+        print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
 
     def get_measures(self, x, y, z):
