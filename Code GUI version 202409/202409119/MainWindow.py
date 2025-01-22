@@ -18,12 +18,13 @@ from MeasureSetupPopup import *
 from NewWindowWithData import MagneticFieldApp
 from tektronix import *
 
-# TODO : Uncomment this lines
-from aquisitionLoops import *
-from Robot import *
-import pythoncom
-import win32com.client
-from oscilloscopeAcquisition import *
+import os
+if os.name != 'posix':
+    from aquisitionLoops import *
+    from Robot import *
+    import pythoncom
+    import win32com.client
+    from oscilloscopeAcquisition import *
 
 ASSETS_FOLDER = "assets/"
 speed = 2000
@@ -140,8 +141,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Robot bureau d'étude")
         self.RobID = "DENSO"
 
-        # TODO: Remove the comment from the following line to enable robot functionality.
-        self.robot = createRobot(self.RobID)
+        if os.name != 'posix':
+            self.robot = createRobot(self.RobID)
 
         # ------------------- Definition of central point for acquisition ---
         self.x_ptr = 0  # point de reference  --prt. begin point of robort arm.
