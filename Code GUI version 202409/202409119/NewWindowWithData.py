@@ -12,6 +12,7 @@ from PyQt5.QtCore import Qt, QTimer
 from scipy.interpolate import griddata
 
 from MagneticFieldSimulation import MagneticFieldSimulation
+import math
 
 
 class MagneticFieldApp(QWidget):
@@ -40,10 +41,17 @@ class MagneticFieldApp(QWidget):
 
     def select_file(self):
         # Ouvrir une boîte de dialogue pour sélectionner un fichier
+        # Open file dialog for saving
         options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog  # Utiliser un dialogue natif selon votre système
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select File", "", "All Files (*);;Text Files (*.txt)",
-                                                   options=options)
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select File",
+            "",
+            "CSV Files (*.csv);;All Files (*)",
+            options=options
+        )
+
         if file_path:
             self.simulation.file_path = file_path
             self.start_reading_file()  #
@@ -70,6 +78,7 @@ class MagneticFieldApp(QWidget):
         # for line in lines:
         #     print(line.strip())
 
+        self.clear_all_graphs()
         # Extraire l'en-tête pour les colonnes
         self.columns = lines[0].strip().split(',')
         print(f"Noms des colonnes : {self.columns}")
@@ -125,6 +134,11 @@ class MagneticFieldApp(QWidget):
         self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
         self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
 
+    def clear_all_graphs(self):
+        self.simulation.resultats = []
+        self.simulation.points_haute_resolution = []
+        self.update_all_graphs()
+
     def add_tab_3d_vectors(self):
         """Onglet 1 : Affichage 3D des vecteurs."""
         self.tab_3d = QWidget()  # Créer un attribut pour l'onglet afin de pouvoir le mettre à jour
@@ -152,6 +166,14 @@ class MagneticFieldApp(QWidget):
 
         # Aligner le layout des boutons à droite
         button_layout.addStretch(1)  # Ajoute un espacement flexible à gauche des boutons
+
+        clear_button = QPushButton("Effacer")
+        clear_button.clicked.connect(self.clear_all_graphs)
+        button_layout.addWidget(clear_button)
+
+        save_button = QPushButton("Sauvegarder")
+        save_button.clicked.connect(self.saveToFile)
+        button_layout.addWidget(save_button)
 
         # Ajouter le layout des boutons au layout principal (vertical)
         layout.addLayout(button_layout)
@@ -301,6 +323,46 @@ class MagneticFieldApp(QWidget):
 
         dialog.setLayout(layout)
         dialog.exec_()
+
+    def saveToFile(self):
+        """Save magnetic field data to CSV file."""
+        # Open file dialog for saving
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save File",
+            "",
+            "CSV Files (*.csv);;All Files (*)",
+            options=options
+        )
+
+        r = 0.01
+        f = 13.56e6  # Fréquence en Hz
+        omega = 2 * math.pi * f  # Pulsation angulaire en rad/s
+        s = math.pi * r ** 2
+        mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
+
+        if file_path:
+            # Add .csv extension if not present
+            if not file_path.endswith('.csv'):
+                file_path += '.csv'
+
+            try:
+                with open(file_path, 'w') as file:
+                    # Write header
+                    file.write('x,y,z,CH1_Max_Voltage,CH2_Max_Voltage,CH3_Max_Voltage\n')
+
+                    # Write data points
+                    for point in self.simulation.points_haute_resolution:
+                        # Write line with dummy values for voltage channels
+                        print(point)
+                        ax = point['Hx'] * mu_0 * s * omega
+                        ay = point['Hy'] * mu_0 * s * omega
+                        az = point['Hz'] * mu_0 * s * omega
+                        file.write(f"{point['x']},{point['y']},{point['z']},{ax},{ay},{az}\n")
+            except Exception as e:
+                print(f"Error saving file: {e}")
 
     def create_plane_and_value_selectors(self, plane_callback, value_callback):
         """Crée les sélecteurs pour le plan et la valeur."""
