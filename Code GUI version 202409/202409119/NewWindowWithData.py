@@ -32,6 +32,7 @@ class MagneticFieldApp(QWidget):
         self.simulation = MagneticFieldSimulation(resolution=1)
         # print(self.simulation.resultats)
         print("ok")
+        self.simulation.file_path= ""
 
         self.lines = None  # Store lines from file
         self.line_index = 0  # Line index
@@ -129,6 +130,7 @@ class MagneticFieldApp(QWidget):
         self.update_tab_2d_plane()  # Mettre à jour les graphiques 2D
         self.update_tab_gaussian_and_radial()  # Mettre à jour les graphiques 3D
         self.plot_3d_vectors()  # Mettre à jour les vecteurs 3D
+        self.file_path_label.setText(self.simulation.file_path)
         self.update_plane_selector_2d_values()
         self.update_plane_selector_3d_values()
         self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
@@ -163,6 +165,9 @@ class MagneticFieldApp(QWidget):
         resolution_button = QPushButton("Modifier Résolution")
         resolution_button.clicked.connect(self.open_resolution_dialog)
         button_layout.addWidget(resolution_button)
+
+        self.file_path_label = QLabel(self.simulation.file_path)
+        button_layout.addWidget(self.file_path_label)
 
         # Aligner le layout des boutons à droite
         button_layout.addStretch(1)  # Ajoute un espacement flexible à gauche des boutons
