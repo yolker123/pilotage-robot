@@ -61,8 +61,21 @@ class Point:
         if oscilloName == "lecroy":
             getAcquisition(f"{self.name}", 0, log_dir)
         if oscilloName == "tektronix":
-            max_values = tektronix.get_measures(self.x, self.y, self.z)
-            print(max_values)
+            values = tektronix.get_measures(self.x, self.y, self.z)
+            print(values)
+            Hx = 0
+            Hy = 0
+            Hz = 0
+            for value in values:
+                if value['value'] == "CH1_MAXIMUM":
+                    Bx = value['value'] / (mfa.simulation.S * mfa.simulation.omega)
+                    Hx = Bx / mfa.simulation.mu_0
+                if value['value'] == "CH2_MAXIMUM":
+                    By = value['value'] / (mfa.simulation.S * mfa.simulation.omega)
+                    Hy = By / mfa.simulation.mu_0
+                if value['value'] == "CH3_MAXIMUM":
+                    Bz = value['value'] / (mfa.simulation.S * mfa.simulation.omega)
+                    Hz = Bz / mfa.simulation.mu_0
             #verifier si cest un maximum
             # Ax, Ay, Az
             # Bx = Ax / (mfa.simulation.S * mfa.simulation.omega)
@@ -76,7 +89,7 @@ class Point:
             # -> calcule Hx Hy Hz
             mfa.simulation.resultats.append({
                 'x': self.x, 'y': self.y, 'z': self.z,
-                'Hx': 1, 'Hy': 1, 'Hz': 1
+                'Hx': Hx, 'Hy': Hy, 'Hz': Hz
             })
             mfa.update_all_graphs()
         print("aquired")
