@@ -96,12 +96,12 @@ class Tektronix:
 
         # Ouvrir le fichier pour écrire l'en-tête
         with open(filename, 'w') as f:
-            headers = ["Timestamp", "x", "y", "z"]  # Les en-têtes fixes
-            headers += [f"{ch}_{mt}" for ch, mt in id_map]
-            f.write(", ".join(headers) + "\n")
+            headers = ["Timestamp","x","y","z"]  # Les en-têtes fixes
+            headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
+            f.write(",".join(headers) + "\n")
 
         # Met à jour le nombre total de mesures configurées
-        self.measurement_number = len(id_map)
+        self.measurement_number = len(self.id_map)
 
         print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
@@ -115,18 +115,22 @@ class Tektronix:
         time.sleep(1)
         self.scope.commands.acquire.state.write("OFF")
 
-        max_values = self.measure_channels()
-        print(max_values)
+        values = self.measure_channels()
+        print(values)
         # Obtenir l'horodatage actuel
         timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Préparer la ligne à écrire
-        data_line = [timestamp, x, y, z] + max_values
-        data_line_str = ", ".join(map(str, data_line))
+        data_line_str = f"{timestamp}, {x}, {y}, {z}"
+        for value in values:
+            data_line_str += f", {value['value']}"
+
+#        data_line = [timestamp, x, y, z, values[0]['value'], values[1]['value'], values[2]['value']]
+ #       data_line_str = ", ".join(map(str, data_line))
 
         with open(filename, 'a') as f:
             f.write(data_line_str + "\n")
 
         print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
 
-        return max_values
+        return values

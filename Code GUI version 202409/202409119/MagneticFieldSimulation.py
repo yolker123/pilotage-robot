@@ -20,24 +20,44 @@ class MagneticFieldSimulation:
         # self.augmenter_resolution(self.resultats)
 
     def read_file_and_calculate_point(self, line, columns):
-        # Définir les indices des colonnes que nous voulons extraire
         try:
-            index_Ax = columns.index("CH1_Max_Voltage")
-            index_Ay = columns.index("CH2_Max_Voltage")
-            index_Az = columns.index("CH3_Max_Voltage")
+            index_Ax = columns.index("CH1_MAXIMUM")
+        except ValueError:
+            index_Ax = -1
+
+        try:
+            index_Ay = columns.index("CH2_MAXIMUM")
+        except ValueError:
+            index_Ay = -1
+
+        try:
+            index_Az = columns.index("CH3_MAXIMUM")
+        except ValueError:
+            index_Az = -1
+
+        # Extraire les valeurs des autres colonnes (x, y, z)
+        try:
             index_x = columns.index("x")
             index_y = columns.index("y")
             index_z = columns.index("z")
-        except ValueError as e:
-            print(f"Erreur : Colonne manquante dans les données : {e}")
+        except ValueError:
+            print("Erreur : Colonnes x, y ou z manquantes.")
             return
+
+        # Initialisation des valeurs par défaut
+        Ax = Ay = Az = 0.0
+        Hx = Hy = Hz = 0.0
 
         # Extraire les valeurs par index
         values = line.split(',')
         try:
-            Ax = float(values[index_Ax])
-            Ay = float(values[index_Ay])
-            Az = float(values[index_Az])
+            if index_Ax != -1:  # Si la colonne "CH1_MAXIMUM" existe
+                Ax = float(values[index_Ax])
+            if index_Ay != -1:  # Si la colonne "CH2_MAXIMUM" existe
+                Ay = float(values[index_Ay])
+            if index_Az != -1:  # Si la colonne "CH3_MAXIMUM" existe
+                Az = float(values[index_Az])
+
             x = float(values[index_x])
             y = float(values[index_y])
             z = float(values[index_z])
@@ -47,14 +67,16 @@ class MagneticFieldSimulation:
             print(f"Erreur lors de l'extraction des valeurs : {e}")
             return
 
-        # Calculs
-        Bx = Ax / (self.S * self.omega)
-        By = Ay / (self.S * self.omega)
-        Bz = Az / (self.S * self.omega)
-
-        Hx = Bx / self.mu_0
-        Hy = By / self.mu_0
-        Hz = Bz / self.mu_0
+        # Calculs de Bx, By, Bz uniquement si les colonnes correspondantes existent
+        if index_Ax != -1:
+            Bx = Ax / (self.S * self.omega)
+            Hx = Bx / self.mu_0
+        if index_Ay != -1:
+            By = Ay / (self.S * self.omega)
+            Hy = By / self.mu_0
+        if index_Az != -1:
+            Bz = Az / (self.S * self.omega)
+            Hz = Bz / self.mu_0
 
         # Ajouter le résultat au tableau
         self.resultats.append({
