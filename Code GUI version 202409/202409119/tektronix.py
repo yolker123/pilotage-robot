@@ -1,4 +1,6 @@
 import atexit
+
+import datetime
 from datetime import datetime as dt
 import pyvisa
 from tm_devices import DeviceManager
@@ -18,6 +20,8 @@ current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
 pwd = os.getcwd()
 filename = os.path.join(pwd, "Measure", f"MaxAmp_{current_time_str}.txt")
 print(f"FILENAME: {filename}")
+
+global wf_img_config
 
 class Tektronix:
     def __init__(self):
@@ -133,4 +137,55 @@ class Tektronix:
 
         print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
 
+        for kt, it in wf_img_config.items():
+            if it.get("wf"):
+                print("waveform activé pour le canal", kt)
+                self.captureWF_tektronix("Measure", kt, f"{x},{y},{z}")
+            if it.get("img"):
+                print("image activé pour le canal", kt)
+                self.captureScreen_tektronix("Measure", kt, f"{x},{y},{z}")
+
         return values
+
+    def captureWF_tektronix(self, acquisition_directory, chan, nomPoint):
+
+        current_time = datetime.datetime.now()
+        instant = current_time.strftime('%Y-%m-%d_%H-%M-%S')
+        waveform_filename = f"logWaveform_{chan}_{nomPoint}_{instant}"
+        waveform_directory = acquisition_directory + "/logWaveform"
+        if not os.path.exists(waveform_directory):
+            os.makedirs(waveform_directory)
+        waveform_filepath = os.path.join(waveform_directory, waveform_filename + ".csv")
+
+        # save the waveform on CH1 as example.wfm
+        self.scope.commands.save.waveform.write(chan, waveform_filepath)
+        # # Enregistrement et tranfert de la Waveform
+        # wf_dir = "D:\\Waveforms"
+        # wf_name = waveform_filename
+        # wf_path = wf_dir + "\\" + wf_name
+        # lecroy.saveWaveform(wf_dir, chan, wf_name)
+        # wf_reelpath = wf_dir + "\\" + chan + wf_name + "00000.csv"
+        # lecroy.transferFile(wf_reelpath, waveform_filepath)
+
+    def captureScreen_tektronix(self, acquisition_directory, chan, nomPoint):
+            current_time = datetime.datetime.now()
+            instant = current_time.strftime('%Y-%m-%d_%H-%M-%S')
+            screenshot_filename = f"logScreenshot_tektronix_{chan}_{nomPoint}_{instant}.png"
+            # We can put the %S for the seconds to avoid rewrite the screenshot if we take two measures in the same minute
+            # Specify the full path to the screenshot folder
+            screenshot_directory = acquisition_directory + "/logScreenshot"
+            # Check if the screenshot folder exists, create it if it doesn't
+            if not os.path.exists(screenshot_directory):
+                os.makedirs(screenshot_directory)
+            # Create the full path of the screenshot file
+            screenshot_filepath = os.path.join(screenshot_directory, screenshot_filename)
+            # Capture and save the screenshot
+            self.scope.save_screenshot(
+                screenshot_filepath,
+                colors="INVERTED",
+                local_folder=screenshot_directory,
+                device_folder="./test",
+                keep_device_file=True,
+            )
+            print(f"Screenshot captured and saved to {screenshot_filepath}")
+
