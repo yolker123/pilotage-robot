@@ -1405,4 +1405,4 @@ if __name__ == '__main__':
     window = MainWindow()
     window.show()
     sys.exit(
-        app.exec_())  # for QT window need to begin with  QApplication(sys.argv) and finish with sys.exit(app.exec_())
+    app.exec_())  # for QT window need to begin with  QApplication(sys.argv) and finish with sys.exit(app.exec_())

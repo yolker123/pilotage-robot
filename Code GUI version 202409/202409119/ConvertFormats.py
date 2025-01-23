@@ -1,13 +1,19 @@
 import os
 import re
+import sys
 from typing import Dict, List, Tuple
 
 def convert_formats(input_dir: str, output_file: str):
     """Fonction principale de conversion."""
-    # Traitement de tous les fichiers
-    all_data = process_directory(input_dir)
-    # Écriture dans le nouveau format
-    write_new_format(output_file, all_data)
+    try:
+        # Traitement de tous les fichiers
+        all_data = process_directory(input_dir)
+        # Écriture dans le nouveau format
+        write_new_format(output_file, all_data)
+    except Exception as e:
+        print(f"Error while convert_formats(): {e}")
+        return
+    print("Conversion finished.")
 
 def parse_coordinates(line: str) -> Tuple[float, float, float]:
     """Extrait les coordonnées x, y, z de la ligne."""
