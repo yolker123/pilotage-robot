@@ -59,12 +59,20 @@ def process_directory(input_dir: str) -> List[Tuple[Tuple[float, float, float], 
 
 def write_new_format(output_file: str, data: List[Tuple[Tuple[float, float, float], Dict[str, str]]]):
     """Écrit les données dans le nouveau format CSV."""
+
+    # Fonction pour effectuer le remplacement et convertir en majuscules
+    def replace_and_uppercase(strings):
+        return [re.sub(r'\bC(\d+)', r'CH\1', s).upper() for s in strings]
+
     # Création de l'en-tête
     channels = set()
     for _, channel_data in data:
         channels.update(channel_data.keys())
 
     header = ['x', 'y', 'z'] + sorted(list(channels))
+    # print(f"Avant : {header}")
+    header = replace_and_uppercase(header)
+    # print(f"Après : {header}")
 
     with open(output_file, 'w') as f:
         # Écriture de l'en-tête
@@ -76,7 +84,4 @@ def write_new_format(output_file: str, data: List[Tuple[Tuple[float, float, floa
             for channel in header[3:]:  # Skip x, y, z
                 line_data.append(str(channel_data.get(channel, '')))
             f.write(', '.join(map(str, line_data)) + '\n')
-
-
-
 

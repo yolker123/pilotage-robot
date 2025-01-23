@@ -37,8 +37,8 @@ class MagneticFieldApp(QWidget):
         self.lines = None  # Store lines from file
         self.line_index = 0  # Line index
         self.initUI()
-        if self.simulation.resultats:
-            self.simulation.augmenter_resolution(self.simulation.resultats, "linear")  # Augmenter la résolution
+        if self.simulation.measuredPoints:
+            self.simulation.augmenter_resolution(self.simulation.measuredPoints, "linear")  # Augmenter la résolution
 
     def select_file(self):
         # Ouvrir une boîte de dialogue pour sélectionner un fichier
@@ -107,12 +107,12 @@ class MagneticFieldApp(QWidget):
             resolution_value = int(resolution_value)
             self.simulation.resolution = resolution_value  # Modifier la résolution de la simulation
             if algorithm == "linear":
-                self.simulation.augmenter_resolution(self.simulation.resultats, algorithm)  # Augmenter la résolution
+                self.simulation.augmenter_resolution(self.simulation.measuredPoints, algorithm)  # Augmenter la résolution
             else:
                 points_proches = self.simulation.selectionner_points_proches()
                 I_moyen = self.simulation.moyenne_I(points_proches)
                 print(I_moyen)
-                self.simulation.augmenter_resolution(self.simulation.resultats, algorithm, I_moyen)
+                self.simulation.augmenter_resolution(self.simulation.measuredPoints, algorithm, I_moyen)
             print("calcul fini")
             self.update_all_graphs()  # Appeler une méthode pour rafraîchir les graphiques
 
@@ -132,7 +132,6 @@ class MagneticFieldApp(QWidget):
         self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
 
     def clear_all_graphs(self):
-        self.simulation.resultats = []
         self.simulation.points_haute_resolution = []
         self.update_all_graphs()
 
@@ -179,25 +178,138 @@ class MagneticFieldApp(QWidget):
         layout.addLayout(button_layout)
         layout.addWidget(self.canvas_3d)
         self.tabs.addTab(self.tab_3d, "Vecteurs 3D")
+        self.add_vector_filter_layout(layout)
+
+    def add_vector_filter_layout(self, layout):
+        """Add filter controls for 3D vector visualization."""
+        filter_layout = QHBoxLayout()
+
+        # Filter type selector
+        filter_label = QLabel("Filter by:")
+        self.filter_type_selector = QComboBox()
+        self.filter_type_selector.addItems(['None', '|H|', 'Hx', 'Hy', 'Hz'])
+        filter_layout.addWidget(filter_label)
+        filter_layout.addWidget(self.filter_type_selector)
+
+        # Min value input
+        min_label = QLabel("Min:")
+        self.min_value_input = QLineEdit()
+        self.min_value_input.setPlaceholderText("Minimum value")
+        filter_layout.addWidget(min_label)
+        filter_layout.addWidget(self.min_value_input)
+
+        # Max value input
+        max_label = QLabel("Max:")
+        self.max_value_input = QLineEdit()
+        self.max_value_input.setPlaceholderText("Maximum value")
+        filter_layout.addWidget(max_label)
+        filter_layout.addWidget(self.max_value_input)
+
+        # Apply filter button
+        apply_filter_button = QPushButton("Apply Filter")
+        apply_filter_button.clicked.connect(self.apply_vector_filter)
+        filter_layout.addWidget(apply_filter_button)
+
+        reset_filter_button = QPushButton("Reset Filter")
+        reset_filter_button.clicked.connect(self.reset_vector_filter)
+        filter_layout.addWidget(reset_filter_button)
+
+        layout.addLayout(filter_layout)
+
+    def apply_vector_filter(self):
+        """Apply filter to 3D vector plot based on selected criteria."""
+        filter_type = self.filter_type_selector.currentText()
+
+        # Get min and max values, defaulting to None if not provided
+        try:
+            min_val = float(self.min_value_input.text()) if self.min_value_input.text() else None
+        except ValueError:
+            min_val = None
+
+        try:
+            max_val = float(self.max_value_input.text()) if self.max_value_input.text() else None
+        except ValueError:
+            max_val = None
+
+        # Filter points based on selected criteria
+        if filter_type == 'None':
+            filtered_points = self.simulation.points_haute_resolution
+        else:
+            filtered_points = self.filter_vector_points(
+                self.simulation.points_haute_resolution,
+                filter_type,
+                min_val,
+                max_val
+            )
+        self.clear_all_graphs()
+        # for p in filtered_points:
+        #     print(p)
+        self.simulation.points_haute_resolution = filtered_points
+        self.update_all_graphs()
+
+    def filter_vector_points(self, points, filter_type, min_val=None, max_val=None):
+        """
+        Filter points based on vector magnitude or component.
+
+        Args:
+            points (list): List of point dictionaries
+            filter_type (str): Type of filter ('|H|', 'Hx', 'Hy', 'Hz')
+            min_val (float, optional): Minimum value for filtering
+            max_val (float, optional): Maximum value for filtering
+
+        Returns:
+            list: Filtered list of points
+        """
+
+        def point_meets_criteria(point):
+            if filter_type == '|H|':
+                value = np.sqrt(point['Hx'] ** 2 + point['Hy'] ** 2 + point['Hz'] ** 2)
+            else:
+                value = point[filter_type]
+            # Check against min and max values
+            if min_val is not None and value < min_val:
+                return False
+            if max_val is not None and value > max_val:
+                return False
+            print(value , "true")
+            return True
+
+        for point in points:
+            if point_meets_criteria(point):
+                point["display"] = True
+            else:
+                point["display"] = False
+
+        return points
+
+    def reset_vector_filter(self):
+        for point in self.simulation.points_haute_resolution:
+            point["display"] = True
+        tmp = self.simulation.points_haute_resolution
+        self.clear_all_graphs()
+        self.simulation.points_haute_resolution = tmp
+        self.update_all_graphs()
 
     def plot_3d_vectors(self):
         """Dessine les vecteurs 3D dans l'onglet correspondant."""
         self.ax_3d.clear()  # Effacer les anciens vecteurs
 
         # Données pour les vecteurs
-        points = self.simulation.resultats
+        points = self.simulation.measuredPoints
         points_interpolés = self.simulation.points_haute_resolution
 
         # Tracer les vecteurs des points originaux
         for point in points:
-            x, y, z = point['x'], point['y'], point['z']
-            Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=0.1, normalize=True)
+            if point["display"]:
+                x, y, z = point['x'], point['y'], point['z']
+                Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=0.1, normalize=True)
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
-            x, y, z = point['x'], point['y'], point['z']
-            Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-            self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=0.1, normalize=True)
+            if point["display"]:
+                x, y, z = point['x'], point['y'], point['z']
+                Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=0.1, normalize=True)
 
         # Configurer les axes
         self.ax_3d.set_title("Vecteurs 3D du champ magnétique")
@@ -405,7 +517,7 @@ class MagneticFieldApp(QWidget):
 
         # rajouter les points resultats qui ne sont pas dans point haute resolution, fait des arrondis il peut y avoir un petit ecart
         # 2 points bugués
-        for p in self.simulation.resultats:
+        for p in self.simulation.measuredPoints:
             if p not in self.simulation.points_haute_resolution:
                 self.simulation.points_haute_resolution.append(p)
 

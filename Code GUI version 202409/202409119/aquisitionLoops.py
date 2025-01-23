@@ -88,7 +88,7 @@ class Point:
             # Hz = Bz / mfa.simulation.mu_0
             print("measure du point :", self.x, self.y, self.z)
             # -> calcule Hx Hy Hz
-            mfa.simulation.resultats.append({
+            mfa.simulation.measuredPoints.append({
                 'x': self.x, 'y': self.y, 'z': self.z,
                 'Hx': Hx, 'Hy': Hy, 'Hz': Hz
             })

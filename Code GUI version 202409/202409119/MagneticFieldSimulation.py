@@ -14,7 +14,7 @@ class MagneticFieldSimulation:
         self.S = math.pi * R ** 2
         self.resolution = resolution
         self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
-        self.resultats = []
+        self.measuredPoints = []
         self.points_haute_resolution = []
         # self.read_file_and_calculate()
         # self.augmenter_resolution(self.resultats)
@@ -77,11 +77,12 @@ class MagneticFieldSimulation:
         if index_Az != -1:
             Bz = Az / (self.S * self.omega)
             Hz = Bz / self.mu_0
-
+        print(f"Hx : {Hx}, Hy : {Hy}, Hz : {Hz}")
         # Ajouter le résultat au tableau
-        self.resultats.append({
+        self.measuredPoints.append({
             'x': x, 'y': y, 'z': z,
-            'Hx': Hx, 'Hy': Hy, 'Hz': Hz
+            'Hx': Hx, 'Hy': Hy, 'Hz': Hz,
+            'display' : True
         })
         H = np.linalg.norm([Hx, Hy, Hz])
         print(f"Résultat ajouté : {H} pour x={x}, y={y}, z={z}")
@@ -111,7 +112,7 @@ class MagneticFieldSimulation:
         y = interpolate([s['y'] for s in sommets])
         z = interpolate([s['z'] for s in sommets])
 
-        return {'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz}
+        return {'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display' : True}
 
 
     def augmenter_resolution(self, points, algorithm, I_moyen=0):
@@ -174,7 +175,7 @@ class MagneticFieldSimulation:
                             r, theta, phi = self.calcul_r_teta_phi(x, y, z)
                             Hx, Hy, Hz = self.convertir_spherique_to_cartesien(Hr, Htheta, Hphi, r, theta, phi)
 
-                            interpolated_points.append({'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz})
+                            interpolated_points.append({'x': x, 'y': y, 'z': z, 'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display' : True})
         print(f"Nombre de points interpolés : {len(interpolated_points)}")
 
         self.points_haute_resolution = interpolated_points
@@ -187,10 +188,10 @@ class MagneticFieldSimulation:
         return r, teta, phi
 
     def selectionner_points_proches(self):
-        for point in self.resultats:
+        for point in self.measuredPoints:
             point['r'] = math.sqrt(point['x'] ** 2 + point['y'] ** 2 + point['z'] ** 2)
 
-        points_tries = sorted(self.resultats, key=lambda point: point['r'])
+        points_tries = sorted(self.measuredPoints, key=lambda point: point['r'])
 
         points_proches = points_tries[:6]
 
