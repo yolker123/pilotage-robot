@@ -102,11 +102,6 @@ class MagneticFieldApp(QWidget):
         self.add_tab_2d_plane()
         self.add_tab_gaussian_and_radial()
 
-    def empty_graph(self):
-        self.simulation.resultats = []
-        self.simulation.points_haute_resolution = []
-        self.update_all_graphs()
-
     def set_resolution(self, resolution_value, dialog, algorithm):
         try:
             resolution_value = int(resolution_value)
