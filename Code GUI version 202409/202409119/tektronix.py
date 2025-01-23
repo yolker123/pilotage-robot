@@ -8,6 +8,7 @@ from tm_devices.drivers import MSO6B
 from tm_devices.helpers import PYVISA_PY_BACKEND
 import os
 import time
+from bddSetupOscilloscope import *
 
 # Initialisation des paramètres
 OSCILLOSCOPE_IP = "172.16.115.218"
@@ -25,12 +26,12 @@ global wf_img_config
 
 class Tektronix:
     def __init__(self):
+        self.scope = None
         self.measurement_number = None
         self.channel_measurements = None
         self.id_map = []
 
     def init_connection(self):
-        self.scope = None
         self.measurement_number = 0
         while self.scope is None:
             try:
@@ -137,28 +138,48 @@ class Tektronix:
 
         print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
 
-        for kt, it in wf_img_config.items():
-            if it.get("wf"):
-                print("waveform activé pour le canal", kt)
-                self.captureWF_tektronix("Measure", kt, f"{x},{y},{z}")
-            if it.get("img"):
-                print("image activé pour le canal", kt)
-                self.captureScreen_tektronix("Measure", kt, f"{x},{y},{z}")
+        if 'wf_img_config' in globals():
+            for kt, it in wf_img_config.items():
+                if it.get("wf"):
+                    print("waveform activé pour le canal", kt)
+                    self.captureWF_tektronix("Measure", kt, f"{x},{y},{z}")
+                if it.get("img"):
+                    print("image activé pour le canal", kt)
+                    screenshots_directory = "C:/Users/Public/Tektronix/TekScope/Screenshots/"
+                    screenshots_directory_measures = screenshots_directory + f"logScreenshot_tektronix_{kt}_{current_time_str}/"
+                    cwd_command = 'FILESystem:CWD "C:/Users/Public/Tektronix/TekScope/Screenshots"'
+                    create_directory_command = 'FILESystem:MKDir "' + screenshots_directory_measures + '"'
+                    self.scope.write(cwd_command)
+                    self.scope.write(create_directory_command)
+                    self.captureScreen_tektronix(screenshots_directory_measures, kt, f"{x},{y},{z}")
+        else:
+            print("La configuration 'wf_img_config' n'est pas définie")
 
         return values
 
     def captureWF_tektronix(self, acquisition_directory, chan, nomPoint):
+        channel_map = {
+            "C1": "CH1",
+            "C2": "CH2",
+            "C3": "CH3",
+            "C4": "CH4"
+        }
 
+        mapped_channel = channel_map.get(chan, chan)
+        print(chan)
+        print(mapped_channel)
         current_time = datetime.datetime.now()
         instant = current_time.strftime('%Y-%m-%d_%H-%M-%S')
-        waveform_filename = f"logWaveform_{chan}_{nomPoint}_{instant}"
+        waveform_filename = f"logWaveform_{mapped_channel}_{nomPoint}_{instant}.csv"
         waveform_directory = acquisition_directory + "/logWaveform"
         if not os.path.exists(waveform_directory):
             os.makedirs(waveform_directory)
         waveform_filepath = os.path.join(waveform_directory, waveform_filename + ".csv")
 
-        # save the waveform on CH1 as example.wfm
-        self.scope.commands.save.waveform.write(chan, waveform_filepath)
+        #waveform_command = 'SAVEON:WAVEFORM:DEST "C:/Users/Public/Tektronix/TekScope/Screenshots"'
+        #scope.write(waveform_command)
+        self.scope.commands.save.waveform.write(f'{mapped_channel}, "{waveform_filename}"')
+
         # # Enregistrement et tranfert de la Waveform
         # wf_dir = "D:\\Waveforms"
         # wf_name = waveform_filename
@@ -173,19 +194,12 @@ class Tektronix:
             screenshot_filename = f"logScreenshot_tektronix_{chan}_{nomPoint}_{instant}.png"
             # We can put the %S for the seconds to avoid rewrite the screenshot if we take two measures in the same minute
             # Specify the full path to the screenshot folder
-            screenshot_directory = acquisition_directory + "/logScreenshot"
             # Check if the screenshot folder exists, create it if it doesn't
-            if not os.path.exists(screenshot_directory):
-                os.makedirs(screenshot_directory)
             # Create the full path of the screenshot file
-            screenshot_filepath = os.path.join(screenshot_directory, screenshot_filename)
-            # Capture and save the screenshot
-            self.scope.save_screenshot(
-                screenshot_filepath,
-                colors="INVERTED",
-                local_folder=screenshot_directory,
-                device_folder="./test",
-                keep_device_file=True,
-            )
+            screenshot_filepath = acquisition_directory + screenshot_filename
+
+            write_screenshot = 'SAVE:IMAGe \"' + screenshot_filepath + '"'
+            self.scope.write(write_screenshot)
+
             print(f"Screenshot captured and saved to {screenshot_filepath}")
 

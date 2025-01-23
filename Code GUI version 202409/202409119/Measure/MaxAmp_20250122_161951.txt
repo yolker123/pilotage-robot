@@ -1,1 +1,0 @@
-Timestamp, x, y, z, CH1_MAXIMUM, CH2_MAXIMUM, CH3_MAXIMUM

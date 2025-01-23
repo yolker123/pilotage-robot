@@ -276,4 +276,3 @@ class MagneticFieldSimulation:
         Htheta = Hx * np.cos(theta) * np.cos(phi) + Hy * np.cos(theta) * np.sin(phi) - Hz * np.sin(theta)
         Hphi = -Hx * np.sin(phi) + Hy * np.cos(phi)
         return Hr, Htheta, Hphi
-

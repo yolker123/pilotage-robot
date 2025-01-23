@@ -267,6 +267,7 @@ class MeasureSetupPopup(QWidget):
         wf_img_config.setdefault(channel_key, {})
         wf_img_config[channel_key]["wf"] = self.cbWaveform.isChecked()
 
+
     def onChangeValue(self):
         """
         Lorsque une checkbox d'option est cochée/décochée, mettre à jour measure_config.

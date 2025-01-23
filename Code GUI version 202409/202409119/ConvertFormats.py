@@ -84,4 +84,3 @@ def write_new_format(output_file: str, data: List[Tuple[Tuple[float, float, floa
             for channel in header[3:]:  # Skip x, y, z
                 line_data.append(str(channel_data.get(channel, '')))
             f.write(', '.join(map(str, line_data)) + '\n')
-
