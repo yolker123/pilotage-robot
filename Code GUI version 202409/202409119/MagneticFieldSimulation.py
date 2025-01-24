@@ -16,6 +16,7 @@ class MagneticFieldSimulation:
         self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
         self.measuredPoints = []
         self.points_haute_resolution = []
+        self.hRobot = 0
         # self.read_file_and_calculate()
         # self.augmenter_resolution(self.resultats)
 
@@ -182,7 +183,7 @@ class MagneticFieldSimulation:
 
 # -----------------NONLINEAIRE
     def calcul_r_teta_phi(self, x, y, z):
-        r = math.sqrt(x ** 2 + y ** 2 + z ** 2)
+        r = math.sqrt(x ** 2 + y ** 2 + (z+self.hRobot) ** 2)
         teta = math.acos(z / r) if r != 0 else 0.0
         phi = math.atan2(y, x)
         return r, teta, phi

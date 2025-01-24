@@ -14,13 +14,12 @@ from bddSetupOscilloscope import *
 OSCILLOSCOPE_IP = "172.16.115.218"
 visa_address = f"TCPIP::{OSCILLOSCOPE_IP}::INSTR"
 num_runs = 1
-current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
+
 # measurement_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE", "FREQUENCY"]
 # channels = ['CH1', 'CH2', 'CH3']
 
 pwd = os.getcwd()
-filename = os.path.join(pwd, "Measure", f"MaxAmp_{current_time_str}.txt")
-print(f"FILENAME: {filename}")
+
 
 global wf_img_config
 
@@ -30,6 +29,8 @@ class Tektronix:
         self.measurement_number = None
         self.channel_measurements = None
         self.id_map = []
+        self.filename = ""
+        self.current_time_str = None
 
     def init_connection(self):
         self.measurement_number = 0
@@ -54,12 +55,15 @@ class Tektronix:
     def measure_channels(self):
         result = []
         for idx in range(self.measurement_number):
-            max_voltage = self.scope.commands.measurement.meas[idx + 1].results.allacqs.mean.query()
+            max_voltage = self.scope.commands.measurement.meas[idx + 1].results.currentacq.mean.query()
             channel, meas_type = self.id_map[idx]
             result.append({"channel": channel, "meas_type": meas_type, "value": max_voltage})
         return result
 
     def set_parameters(self, config):
+
+        self.scope.commands.acquire.state.write("OFF")
+        self.scope.commands.acquire.mode.write("Sample")
         # Dictionnaires pour stocker les mesures par canal
         channel_map = {
             "C1": "CH1",
@@ -99,11 +103,8 @@ class Tektronix:
                 self.id_map.append((channel, meas_type))
                 unique_id += 1
 
-        # Ouvrir le fichier pour écrire l'en-tête
-        with open(filename, 'w') as f:
-            headers = ["Timestamp","x","y","z"]  # Les en-têtes fixes
-            headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
-            f.write(",".join(headers) + "\n")
+
+
 
         # Met à jour le nombre total de mesures configurées
         self.measurement_number = len(self.id_map)
@@ -111,16 +112,18 @@ class Tektronix:
         print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
 
+        headers = ["Timestamp","x","y","z"]  # Les en-têtes fixes
+        headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
+        self.header_line = ",".join(headers) + "\n"
+
+
     def get_measures(self, x, y, z):
         # print(f"Run {run + 1}/{num_runs}")
-        self.scope.commands.acquire.state.write("OFF")
-        time.sleep(1)
-        self.scope.commands.acquire.mode.write("Sample")
         self.scope.commands.acquire.state.write("ON")
-        time.sleep(1)
-        self.scope.commands.acquire.state.write("OFF")
 
         values = self.measure_channels()
+
+        time.sleep(1)
         print(values)
         # Obtenir l'horodatage actuel
         timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -133,10 +136,10 @@ class Tektronix:
 #        data_line = [timestamp, x, y, z, values[0]['value'], values[1]['value'], values[2]['value']]
  #       data_line_str = ", ".join(map(str, data_line))
 
-        with open(filename, 'a') as f:
+        with open(self.filename, 'a') as f:
             f.write(data_line_str + "\n")
 
-        print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
+        print(f"Les valeurs maximales ont été sauvegardées dans {self.filename}")
 
         if 'wf_img_config' in globals():
             for kt, it in wf_img_config.items():
@@ -146,7 +149,7 @@ class Tektronix:
                 if it.get("img"):
                     print("image activé pour le canal", kt)
                     screenshots_directory = "C:/Users/Public/Tektronix/TekScope/Screenshots/"
-                    screenshots_directory_measures = screenshots_directory + f"logScreenshot_tektronix_{kt}_{current_time_str}/"
+                    screenshots_directory_measures = screenshots_directory + f"logScreenshot_tektronix_{kt}_{self.current_time_str}/"
                     cwd_command = 'FILESystem:CWD "C:/Users/Public/Tektronix/TekScope/Screenshots"'
                     create_directory_command = 'FILESystem:MKDir "' + screenshots_directory_measures + '"'
                     self.scope.write(cwd_command)
@@ -156,6 +159,12 @@ class Tektronix:
             print("La configuration 'wf_img_config' n'est pas définie")
 
         return values
+    def create_file(self, hauteur):
+        # Ouvrir le fichier pour écrire l'en-tête
+        self.current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
+        self.filename = os.path.join(pwd, "Measure", f"MaxAmp_{self.current_time_str}_{hauteur}.csv")
+        with open(self.filename, 'w') as f:
+            f.write(self.header_line)
 
     def captureWF_tektronix(self, acquisition_directory, chan, nomPoint):
         channel_map = {

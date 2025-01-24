@@ -62,9 +62,9 @@ class Point:
         if oscilloName == "tektronix":
             values = tektronix.get_measures(self.x, self.y, self.z)
             print(values)
-            Hx = 0
-            Hy = 0
-            Hz = 0
+            Hx = None
+            Hy = None
+            Hz = None
             for value in values:
                 if value['meas_type'] == "MAXIMUM" and value['channel'] == 'CH1':
                     print("value CH :", value)
@@ -87,11 +87,12 @@ class Point:
             # Hz = Bz / mfa.simulation.mu_0
             print("measure du point :", self.x, self.y, self.z)
             # -> calcule Hx Hy Hz
-            mfa.simulation.measuredPoints.append({
-                'x': self.x, 'y': self.y, 'z': self.z,
-                'Hx': Hx, 'Hy': Hy, 'Hz': Hz
-            })
-            mfa.update_all_graphs()
+            if Hx is not None and Hy is not None and Hz is not None:
+                mfa.simulation.measuredPoints.append({
+                    'x': self.x, 'y': self.y, 'z': self.z,
+                    'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display': True
+                })
+                mfa.update_all_graphs()
         print("aquired")
 
 
@@ -108,7 +109,12 @@ def createRobot(type):
 
 def Acquire_points(points, robot, mfa, x_ptr=None, y_ptr=None, z_ptr=None, log_dir="logAcquisition", oscilloName="",
                    tektronix=None):
+    z_ptr_reel = z_ptr - 211.1
+    mfa.simulation.hRobot = z_ptr_reel
+    if oscilloName == "tektronix":
+        tektronix.create_file(z_ptr_reel)
     for point in points:
+
         point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix)
     if x_ptr == None or y_ptr == None or z_ptr == None:
         return
