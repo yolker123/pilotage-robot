@@ -58,7 +58,7 @@ class Point:
 
         # TODO : MOCHE
         if oscilloName == "lecroy":
-            getAcquisition(f"{self.name}", 0, log_dir)
+            getAcquisition(mfa, f"{self.name}", 0, log_dir)
         if oscilloName == "tektronix":
             values = tektronix.get_measures(self.x, self.y, self.z)
             print(values)
@@ -76,18 +76,15 @@ class Point:
                 if value['meas_type'] == "MAXIMUM" and value['channel'] == 'CH3':
                     Bz = float(value['value']) / (mfa.simulation.S * mfa.simulation.omega)
                     Hz = Bz / mfa.simulation.mu_0
-            # verifier si cest un maximum
-            # Ax, Ay, Az
-            # Bx = Ax / (mfa.simulation.S * mfa.simulation.omega)
-            # By = Ay / (mfa.simulation.S * mfa.simulation.omega)
-            # Bz = Az / (mfa.simulation.S * mfa.simulation.omega)
-            #
-            # Hx = Bx / mfa.simulation.mu_0
-            # Hy = By / mfa.simulation.mu_0
-            # Hz = Bz / mfa.simulation.mu_0
             print("measure du point :", self.x, self.y, self.z)
             # -> calcule Hx Hy Hz
-            if Hx is not None and Hy is not None and Hz is not None:
+            if Hx is not None or Hy is not None or Hz is not None:
+                if Hx is None:
+                    Hx= 0
+                if Hy is None:
+                    Hy= 0
+                if Hz is None:
+                    Hz= 0
                 mfa.simulation.measuredPoints.append({
                     'x': self.x, 'y': self.y, 'z': self.z,
                     'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display': True
@@ -113,9 +110,26 @@ def Acquire_points(points, robot, mfa, x_ptr=None, y_ptr=None, z_ptr=None, log_d
     mfa.simulation.hRobot = z_ptr_reel
     if oscilloName == "tektronix":
         tektronix.create_file(z_ptr_reel)
+        tektronix.scope.write("FPANEL:PRESS AUTOset")
     for point in points:
 
         point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix)
+    if oscilloName == "tektronix":
+        base_waveform_path = "C:/Users/Public/Tektronix/TekScope/WaveForm/"
+        base_screenshot_path = "C:/Users/Public/Tektronix/TekScope/Screenshots/"
+        destination_base_path = "//PCROBOT/Users/isen/PycharmProjects/pilotage-robot/Code GUI version 202409/202409119/Measure/TekScope/"
+
+        # Construction des chemins complets pour le waveform
+        waveform_source = base_waveform_path + f"logWaveform_tektronix_{tektronix.current_time_str}/"
+        waveform_dest = destination_base_path + 'WaveForm/' + f"logWaveform_tektronix_{tektronix.current_time_str}/"
+        # Construction des chemins complets pour les screenshots
+        screenshot_source = base_screenshot_path + f"logScreenshot_tektronix_{tektronix.current_time_str}/"
+        screenshot_dest = destination_base_path + 'Screenshots/' + f"logScreenshot_tektronix_{tektronix.current_time_str}/"
+        # Copier les fichiers de waveform
+        tektronix.scope.write(f'FILESystem:COPy "{waveform_source}", "{waveform_dest}"')
+        # Copier les fichiers de screenshot
+        tektronix.scope.write(f'FILESystem:COPy "{screenshot_source}", "{screenshot_dest}"')
+
     if x_ptr == None or y_ptr == None or z_ptr == None:
         return
     timeout = 6000

@@ -1,3 +1,4 @@
+import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,9 +53,18 @@ class MagneticFieldApp(QWidget):
         )
 
         if file_path:
+            hRobot = self.get_hrobot_from_filename(file_path)
+            print(f"Valeur extraite : {hRobot}")  # Affiche la valeur extraite
+            self.simulation.hRobot = hRobot
             self.start_reading_file(file_path)
             self.label_file_path.setText(file_path)
             self.update_all_graphs()
+
+    def get_hrobot_from_filename(self, file_path):
+        filename = os.path.basename(file_path)  # Récupérer le nom du fichier sans le chemin
+        name_without_extension = filename.split('.csv')[0]  # Enlever l'extension .csv
+        value = name_without_extension.rsplit('_', 1)[-1]  # Récupérer la partie après le dernier '_'
+        return value
 
     def start_reading_file(self, file_path):
         # Vérifier que le fichier peut être ouvert
@@ -290,13 +300,13 @@ class MagneticFieldApp(QWidget):
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=0.1, normalize=True)
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=1, normalize=True)
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=0.1, normalize=True)
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=1, normalize=True)
 
         # Configurer les axes
         self.ax_3d.set_title("Vecteurs 3D du champ magnétique")

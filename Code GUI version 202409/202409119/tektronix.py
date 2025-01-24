@@ -25,6 +25,7 @@ global wf_img_config
 
 class Tektronix:
     def __init__(self):
+        self.header_line = None
         self.scope = None
         self.measurement_number = None
         self.channel_measurements = None
@@ -112,7 +113,7 @@ class Tektronix:
         print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
 
-        headers = ["Timestamp","x","y","z"]  # Les en-têtes fixes
+        headers = ["Timestamp","X","Y","Z"]  # Les en-têtes fixes
         headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
         self.header_line = ",".join(headers) + "\n"
 
@@ -121,9 +122,9 @@ class Tektronix:
         # print(f"Run {run + 1}/{num_runs}")
         self.scope.commands.acquire.state.write("ON")
 
+        time.sleep(1)
         values = self.measure_channels()
 
-        time.sleep(1)
         print(values)
         # Obtenir l'horodatage actuel
         timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -141,20 +142,45 @@ class Tektronix:
 
         print(f"Les valeurs maximales ont été sauvegardées dans {self.filename}")
 
+        self.scope.write('FILESystem:MOUNT:DRIVE "L:;192.168.30.31;')
+
         if 'wf_img_config' in globals():
             for kt, it in wf_img_config.items():
                 if it.get("wf"):
+                    waveform_directory = "C:/Users/Public/Tektronix/TekScope/WaveForm/"
+                    waveform_directory_measures = waveform_directory + f"logWaveform_tektronix_{self.current_time_str}/"
+                    waveform_directory_measures_channel = waveform_directory_measures + kt + "/"
+                    cwd_command_waveform = 'FILESystem:CWD "C:/Users/Public/Tektronix/TekScope/WaveForm"'
+                    create_directory_command_waveform = 'FILESystem:MKDir "' + waveform_directory_measures + '"'
+                    cwd_command_waveform_subfolder = 'FILESystem:CWD "' + waveform_directory_measures + '"'
+                    create_directory_command_waveform2 = 'FILESystem:MKDir "' + kt + '"'
+                    cwd_command_waveform_subfolder2 = 'FILESystem:CWD "' + waveform_directory_measures + kt + '"'
+                    self.scope.write(cwd_command_waveform)
+                    self.scope.write(create_directory_command_waveform)
+                    self.scope.write(cwd_command_waveform_subfolder)
+                    self.scope.write(create_directory_command_waveform2)
+                    self.scope.write(cwd_command_waveform_subfolder2)
                     print("waveform activé pour le canal", kt)
-                    self.captureWF_tektronix("Measure", kt, f"{x},{y},{z}")
+                    self.captureWF_tektronix(waveform_directory_measures, kt, f"{x},{y},{z}")
+
                 if it.get("img"):
+                    self.scope.commands.acquire.state.write("OFF")
                     print("image activé pour le canal", kt)
                     screenshots_directory = "C:/Users/Public/Tektronix/TekScope/Screenshots/"
-                    screenshots_directory_measures = screenshots_directory + f"logScreenshot_tektronix_{kt}_{self.current_time_str}/"
-                    cwd_command = 'FILESystem:CWD "C:/Users/Public/Tektronix/TekScope/Screenshots"'
-                    create_directory_command = 'FILESystem:MKDir "' + screenshots_directory_measures + '"'
-                    self.scope.write(cwd_command)
-                    self.scope.write(create_directory_command)
-                    self.captureScreen_tektronix(screenshots_directory_measures, kt, f"{x},{y},{z}")
+                    screenshots_directory_measures = screenshots_directory + f"logScreenshot_tektronix_{self.current_time_str}/"
+                    screenshot_directory_measures_channel = screenshots_directory_measures + kt + "/"
+                    cwd_command_screenshot = 'FILESystem:CWD "C:/Users/Public/Tektronix/TekScope/Screenshots"'
+                    create_directory_command_screenshot = 'FILESystem:MKDir "' + screenshots_directory_measures + '"'
+                    cwd_command_screenshot_subfolder = 'FILESystem:CWD "' + screenshots_directory_measures + '"'
+                    create_directory_command_screenshot2 = 'FILESystem:MKDir "' + kt + '"'
+                    cwd_command_screenshot_subfolder2 = 'FILESystem:CWD "' + screenshot_directory_measures_channel + '"'
+                    self.scope.write(cwd_command_screenshot)
+                    self.scope.write(create_directory_command_screenshot)
+                    self.scope.write(cwd_command_screenshot_subfolder)
+                    self.scope.write(create_directory_command_screenshot2)
+                    self.scope.write(cwd_command_screenshot_subfolder2)
+                    self.captureScreen_tektronix(screenshot_directory_measures_channel, kt, f"{x},{y},{z}")
+
         else:
             print("La configuration 'wf_img_config' n'est pas définie")
 
@@ -180,22 +206,9 @@ class Tektronix:
         current_time = datetime.datetime.now()
         instant = current_time.strftime('%Y-%m-%d_%H-%M-%S')
         waveform_filename = f"logWaveform_{mapped_channel}_{nomPoint}_{instant}.csv"
-        waveform_directory = acquisition_directory + "/logWaveform"
-        if not os.path.exists(waveform_directory):
-            os.makedirs(waveform_directory)
-        waveform_filepath = os.path.join(waveform_directory, waveform_filename + ".csv")
 
-        #waveform_command = 'SAVEON:WAVEFORM:DEST "C:/Users/Public/Tektronix/TekScope/Screenshots"'
-        #scope.write(waveform_command)
         self.scope.commands.save.waveform.write(f'{mapped_channel}, "{waveform_filename}"')
 
-        # # Enregistrement et tranfert de la Waveform
-        # wf_dir = "D:\\Waveforms"
-        # wf_name = waveform_filename
-        # wf_path = wf_dir + "\\" + wf_name
-        # lecroy.saveWaveform(wf_dir, chan, wf_name)
-        # wf_reelpath = wf_dir + "\\" + chan + wf_name + "00000.csv"
-        # lecroy.transferFile(wf_reelpath, waveform_filepath)
 
     def captureScreen_tektronix(self, acquisition_directory, chan, nomPoint):
             current_time = datetime.datetime.now()

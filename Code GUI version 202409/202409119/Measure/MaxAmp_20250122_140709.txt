@@ -1,3 +1,0 @@
-Timestamp, x, y, z, CH1_MAXIMUM, CH1_FREQUENCY, CH1_PK2PK
-2025-01-22 14:08:26, 394.7, -5.0, 480.1, {'channel': 'CH1', 'meas_type': 'MAXIMUM', 'value': '1.0141559659091'}, {'channel': 'CH1', 'meas_type': 'FREQUENCY', 'value': '13.0003397492462E+3'}, {'channel': 'CH1', 'meas_type': 'PK2PK', 'value': '2.0532392045455'}
-2025-01-22 14:10:21, 394.7, -5.0, 480.1, {'channel': 'CH1', 'meas_type': 'MAXIMUM', 'value': '1.013568750'}, {'channel': 'CH1', 'meas_type': 'FREQUENCY', 'value': '12.9999387843897E+3'}, {'channel': 'CH1', 'meas_type': 'PK2PK', 'value': '2.0526463750'}

@@ -38,11 +38,11 @@ class MagneticFieldSimulation:
 
         # Extraire les valeurs des autres colonnes (x, y, z)
         try:
-            index_x = columns.index("x")
-            index_y = columns.index("y")
-            index_z = columns.index("z")
+            index_x = columns.index("X")
+            index_y = columns.index("Y")
+            index_z = columns.index("Z")
         except ValueError:
-            print("Erreur : Colonnes x, y ou z manquantes.")
+            print("Erreur : Colonnes X, Y ou Z manquantes.")
             return
 
         # Initialisation des valeurs par défaut
@@ -183,7 +183,7 @@ class MagneticFieldSimulation:
 
 # -----------------NONLINEAIRE
     def calcul_r_teta_phi(self, x, y, z):
-        r = math.sqrt(x ** 2 + y ** 2 + (z+self.hRobot) ** 2)
+        r = math.sqrt(x ** 2 + y ** 2 + (z+float(self.hRobot)) ** 2)
         teta = math.acos(z / r) if r != 0 else 0.0
         phi = math.atan2(y, x)
         return r, teta, phi

@@ -631,7 +631,7 @@ class MainWindow(QMainWindow):
         if self.oscilloName == "lecroy":
             current_time = datetime.datetime.now()
             log_dir = f"logAcquisition/measure_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
-            getAcquisition("(0 0 0)", 0, log_dir)
+            getAcquisition(self.mfa, "(0 0 0)", 0, log_dir)
             validationText.setText("Autosetup Done")
         if self.oscilloName == "tektronix":
             tektronix_get_measures(self.scope, self.measurementNumber)
@@ -889,7 +889,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         if self.robot.type == "DENSO":
             err = self.robot.Energize(0)
-        getAcquisition(f"({x - self.fixed_x} {y - self.fixed_y} {z - self.fixed_z})", 0, self.point_log_dir)
+        getAcquisition(self.mfa, f"({x - self.fixed_x} {y - self.fixed_y} {z - self.fixed_z})", 0, self.point_log_dir)
         if self.robot.type == "DENSO":
             err = self.robot.Energize(1)
 
