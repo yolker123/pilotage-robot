@@ -99,17 +99,19 @@ class Tektronix:
                 self.id_map.append((channel, meas_type))
                 unique_id += 1
 
-        # Ouvrir le fichier pour écrire l'en-tête
-        with open(filename, 'w') as f:
-            headers = ["Timestamp","x","y","z"]  # Les en-têtes fixes
-            headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
-            f.write(",".join(headers) + "\n")
+
+
 
         # Met à jour le nombre total de mesures configurées
         self.measurement_number = len(self.id_map)
 
         print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
+
+        headers = ["Timestamp","x","y","z"]  # Les en-têtes fixes
+        headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
+        self.header_line = ",".join(headers) + "\n"
+
 
     def get_measures(self, x, y, z):
         # print(f"Run {run + 1}/{num_runs}")
@@ -156,6 +158,10 @@ class Tektronix:
             print("La configuration 'wf_img_config' n'est pas définie")
 
         return values
+    def create_file(self):
+        # Ouvrir le fichier pour écrire l'en-tête
+        with open(filename, 'w') as f:
+            f.write(self.header_line)
 
     def captureWF_tektronix(self, acquisition_directory, chan, nomPoint):
         channel_map = {

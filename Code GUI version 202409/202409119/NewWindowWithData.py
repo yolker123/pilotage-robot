@@ -18,7 +18,6 @@ import math
 class MagneticFieldApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.columns = None
         self.setWindowTitle("Simulation du Champ Magnétique")
 
         # Layout principal
@@ -29,16 +28,15 @@ class MagneticFieldApp(QWidget):
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
 
-        self.simulation = MagneticFieldSimulation(resolution=1)
-        # print(self.simulation.resultats)
-        print("ok")
-        self.simulation.file_path= ""
+        # Variable
 
-        self.lines = None  # Store lines from file
-        self.line_index = 0  # Line index
+        self.simulation = MagneticFieldSimulation(resolution=1)
         self.initUI()
-        if self.simulation.measuredPoints:
-            self.simulation.augmenter_resolution(self.simulation.measuredPoints, "linear")  # Augmenter la résolution
+
+    def initUI(self):
+        self.create_tab_3d_vectors()
+        self.add_tab_2d_plane()
+        self.add_tab_gaussian_and_radial()
 
     def select_file(self):
         # Ouvrir une boîte de dialogue pour sélectionner un fichier
@@ -54,13 +52,15 @@ class MagneticFieldApp(QWidget):
         )
 
         if file_path:
-            self.simulation.file_path = file_path
-            self.start_reading_file()  #
+            self.start_reading_file(file_path)
+            self.label_file_path.setText(file_path)
+            self.update_all_graphs()
 
-    def start_reading_file(self):
+    def start_reading_file(self, file_path):
         # Vérifier que le fichier peut être ouvert
+        lines = None
         try:
-            with open(self.simulation.file_path, 'r') as file:
+            with open(file_path, 'r') as file:
                 lines = file.readlines()
         except FileNotFoundError:
             print("Erreur : Le fichier ne peut pas être trouvé.")
@@ -74,33 +74,19 @@ class MagneticFieldApp(QWidget):
             print("Erreur : Le fichier est vide.")
             return
 
-        # Afficher les lignes lues (pour vérification)
-        print("Lignes lues du fichier :")
-        # for line in lines:
-        #     print(line.strip())
-
-        self.clear_all_graphs()
         # Extraire l'en-tête pour les colonnes
-        self.columns = lines[0].strip().split(',')
-        print(f"Noms des colonnes : {self.columns}")
+        columns = lines[0].strip().split(',')
+        print(f"Noms des colonnes : {columns}")
 
-        # Stocker le reste des lignes
-        self.lines = lines[1:]  # Les données sans l'en-tête
+        lines = lines[1:]  # Enlever la ligne d'en-tête
 
-        # Process all lines at once
-        for line in self.lines:
+        for line in lines:
             line = line.strip()
             if line:
-                self.simulation.read_file_and_calculate_point(line, self.columns)
-
-        # Update all graphs after processing all lines
-        self.update_all_graphs()
+                self.simulation.read_file_and_calculate_point(line, columns)
 
 
-    def initUI(self):
-        self.add_tab_3d_vectors()
-        self.add_tab_2d_plane()
-        self.add_tab_gaussian_and_radial()
+
 
     def set_resolution(self, resolution_value, dialog, algorithm):
         try:
@@ -125,7 +111,6 @@ class MagneticFieldApp(QWidget):
         self.update_tab_2d_plane()  # Mettre à jour les graphiques 2D
         self.update_tab_gaussian_and_radial()  # Mettre à jour les graphiques 3D
         self.plot_3d_vectors()  # Mettre à jour les vecteurs 3D
-        self.file_path_label.setText(self.simulation.file_path)
         self.update_plane_selector_2d_values()
         self.update_plane_selector_3d_values()
         self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
@@ -133,9 +118,10 @@ class MagneticFieldApp(QWidget):
 
     def clear_all_graphs(self):
         self.simulation.points_haute_resolution = []
+        self.label_file_path.setText("")
         self.update_all_graphs()
 
-    def add_tab_3d_vectors(self):
+    def create_tab_3d_vectors(self):
         """Onglet 1 : Affichage 3D des vecteurs."""
         self.tab_3d = QWidget()  # Créer un attribut pour l'onglet afin de pouvoir le mettre à jour
         layout = QVBoxLayout()
@@ -160,8 +146,8 @@ class MagneticFieldApp(QWidget):
         resolution_button.clicked.connect(self.open_resolution_dialog)
         button_layout.addWidget(resolution_button)
 
-        self.file_path_label = QLabel(self.simulation.file_path)
-        button_layout.addWidget(self.file_path_label)
+        self.label_file_path = QLabel("")
+        button_layout.addWidget(self.label_file_path)
 
         # Aligner le layout des boutons à droite
         button_layout.addStretch(1)  # Ajoute un espacement flexible à gauche des boutons

@@ -108,6 +108,8 @@ def createRobot(type):
 
 def Acquire_points(points, robot, mfa, x_ptr=None, y_ptr=None, z_ptr=None, log_dir="logAcquisition", oscilloName="",
                    tektronix=None):
+    if oscilloName == "tektronix":
+        tektronix.create_file()
     for point in points:
         point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix)
     if x_ptr == None or y_ptr == None or z_ptr == None:

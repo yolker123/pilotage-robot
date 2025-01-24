@@ -1353,8 +1353,7 @@ class MainWindow(QMainWindow):
             if self.oscilloName == "lecroy":
                 setOscilloscopeParameters(config)
             if self.oscilloName == "tektronix":
-                self.measurementNumber = self.tektronix.set_parameters(config)
-                print(self.measurementNumber)
+                self.tektronix.set_parameters(config)
 
             self.centralWidget().setEnabled(True)
             self.canMeasure = True
