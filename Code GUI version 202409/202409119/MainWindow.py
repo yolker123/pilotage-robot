@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
 
         Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
         if self.oscilloName == "lecroy":
-            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}.csv")
+            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
         def gui2():
             self.canMove = True

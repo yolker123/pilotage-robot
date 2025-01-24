@@ -19,8 +19,7 @@ current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
 # channels = ['CH1', 'CH2', 'CH3']
 
 pwd = os.getcwd()
-filename = os.path.join(pwd, "Measure", f"MaxAmp_{current_time_str}.txt")
-print(f"FILENAME: {filename}")
+
 
 global wf_img_config
 
@@ -30,6 +29,7 @@ class Tektronix:
         self.measurement_number = None
         self.channel_measurements = None
         self.id_map = []
+        self.filename = ""
 
     def init_connection(self):
         self.measurement_number = 0
@@ -135,10 +135,10 @@ class Tektronix:
 #        data_line = [timestamp, x, y, z, values[0]['value'], values[1]['value'], values[2]['value']]
  #       data_line_str = ", ".join(map(str, data_line))
 
-        with open(filename, 'a') as f:
+        with open(self.filename, 'a') as f:
             f.write(data_line_str + "\n")
 
-        print(f"Les valeurs maximales ont été sauvegardées dans {filename}")
+        print(f"Les valeurs maximales ont été sauvegardées dans {self.filename}")
 
         if 'wf_img_config' in globals():
             for kt, it in wf_img_config.items():
@@ -158,9 +158,11 @@ class Tektronix:
             print("La configuration 'wf_img_config' n'est pas définie")
 
         return values
-    def create_file(self):
+    def create_file(self, hauteur):
         # Ouvrir le fichier pour écrire l'en-tête
-        with open(filename, 'w') as f:
+        self.filename = os.path.join(pwd, "Measure", f"MaxAmp_{current_time_str}_{hauteur}.csv")
+        with open(self.filename, 'w') as f:
+            f.write(hauteur)
             f.write(self.header_line)
 
     def captureWF_tektronix(self, acquisition_directory, chan, nomPoint):
