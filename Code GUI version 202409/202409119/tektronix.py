@@ -1,7 +1,7 @@
 """!
  * @file        tektronix.py
  * @brief       Contains methods for connecting, configuring and measuring with the Tektronix oscilloscope.
- * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony | MULLOT Agathe
  * @version     0.1
  * @date        2025
 """
