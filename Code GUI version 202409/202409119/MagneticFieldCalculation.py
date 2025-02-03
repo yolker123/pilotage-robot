@@ -1,12 +1,24 @@
+"""!
+ * @file        MagneticFieldCalculation.py
+ * @brief       Class applies linear and non-linear algorithms and manages file import
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @version     0.1
+ * @date        2025
+"""
 
-from scipy.constants import mu_0
-from scipy.integrate import quad
 import itertools
 import numpy as np
 import math
 
-class MagneticFieldSimulation:
+class MagneticFieldCalculation:
     def __init__(self, resolution=3, R=0.01):
+        """
+        Initialise les paramètres physiques et les variables pour le calcul du champ magnétique.
+
+        Parameters:
+        resolution (int): Niveau de résolution pour l'interpolation.
+        R (float): Rayon utilisé dans le calcul de surface.
+        """
         self.c = 3e8  # Vitesse de la lumière en m/s
         self.F = 13.56e6  # Fréquence en Hz
         self.omega = 2 * math.pi * self.F  # Pulsation angulaire en rad/s
@@ -14,13 +26,21 @@ class MagneticFieldSimulation:
         self.S = math.pi * R ** 2
         self.resolution = resolution
         self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
+
+        # Listes pour stocker les points mesurés et à haute résolution
         self.measuredPoints = []
         self.points_haute_resolution = []
-        self.hRobot = 0
-        # self.read_file_and_calculate()
-        # self.augmenter_resolution(self.resultats)
+        self.hRobot = 0 # Hauteur du robot
+
 
     def read_file_and_calculate_point(self, line, columns):
+        """
+         Lit une ligne de fichier, extrait les valeurs et calcule les composantes du champ magnétique.
+
+         Parameters:
+         line (str): Ligne lue du fichier contenant les valeurs brutes.
+         columns (list): Liste des noms de colonnes pour correspondre aux indices dans la ligne.
+         """
         try:
             index_Ax = columns.index("CH1_MAXIMUM")
         except ValueError:
@@ -89,7 +109,16 @@ class MagneticFieldSimulation:
         print(f"Résultat ajouté : {H} pour x={x}, y={y}, z={z}")
 
     def interpoler_trilineaire(self, sommets, u, v, w):
-        """Interpolation trilineaire entre 8 sommets."""
+        """
+        Réalise une interpolation trilineaire entre huit sommets.
+
+        Parameters:
+        sommets (list): Points de sommets pour l'interpolation.
+        u, v, w (float): Facteurs d'interpolation.
+
+        Returns:
+        dict: Point interpolé avec les valeurs calculées.
+        """
 
         # Function to perform trilinear interpolation for a given set of values
         def interpolate(values):
@@ -117,7 +146,14 @@ class MagneticFieldSimulation:
 
 
     def augmenter_resolution(self, points, algorithm, I_moyen=0):
-        """Augmente la résolution de la grille avec interpolation trilineaire."""
+        """
+        Augmente la résolution de la grille avec une interpolation trilineaire.
+
+        Parameters:
+        points (list): Points à basse résolution.
+        algorithm (str): Type d'algorithme ("linear" ou autre) utilisé pour le calcul.
+        I_moyen (float): Intensité moyenne, utilisée pour les calculs non-linéaires.
+        """
         print(f"Nombre initial de points : {len(points)}")
 
         interpolated_points = []
@@ -183,12 +219,27 @@ class MagneticFieldSimulation:
 
 # -----------------NONLINEAIRE
     def calcul_r_teta_phi(self, x, y, z):
+        """
+        Convertit les coordonnées cartésiennes en coordonnées sphériques.
+
+        Parameters:
+        x, y, z (float): Coordonnées cartésiennes.
+
+        Returns:
+        tuple: Rayon r, angle theta, et angle phi en radians.
+        """
         r = math.sqrt(x ** 2 + y ** 2 + (z+float(self.hRobot)) ** 2)
         teta = math.acos(z / r) if r != 0 else 0.0
         phi = math.atan2(y, x)
         return r, teta, phi
 
     def selectionner_points_proches(self):
+        """
+        Sélectionne les 6 points mesurés les plus proches de l'origine.
+
+        Returns:
+        list: Liste des 6 points les plus proches.
+        """
         for point in self.measuredPoints:
             point['r'] = math.sqrt(point['x'] ** 2 + point['y'] ** 2 + point['z'] ** 2)
 
@@ -203,6 +254,15 @@ class MagneticFieldSimulation:
         return points_proches
 
     def moyenne_I(self, points_proches):
+        """
+        Calcule l'intensité moyenne I en utilisant les points proches.
+
+        Parameters:
+        points_proches (list): Liste des points proches.
+
+        Returns:
+        float: Moyenne de l'intensité calculée.
+        """
         I_valeurs = []
         print("Points proches", points_proches)
         for point in points_proches:
@@ -218,6 +278,17 @@ class MagneticFieldSimulation:
         return sum(I_valeurs) / len(I_valeurs) if I_valeurs else None
 
     def calculer_I(self, H_r, r, theta):
+        """
+        Calcule l'intensité I en fonction du champ radial H_r.
+
+        Parameters:
+        H_r (float): Champ magnétique radial.
+        r (float): Distance radiale.
+        theta (float): Angle polaire.
+
+        Returns:
+        float: Intensité I calculée.
+        """
         facteur1 = 1j / (self.k ** 2 * r ** 2)
         facteur2 = 1 / (self.k ** 3 * r ** 3)
 
@@ -230,6 +301,17 @@ class MagneticFieldSimulation:
         return res
 
     def calculer_I_Htetha(self, H_theta, r, theta):
+        """
+        Calcule l'intensité I en fonction du champ transversal H_theta.
+
+        Parameters:
+        H_theta (float): Champ magnétique transversal.
+        r (float): Distance radiale.
+        theta (float): Angle polaire.
+
+        Returns:
+        float: Intensité I calculée.
+        """
         sin_theta = np.sin(theta)
 
         facteur = (-1 / (self.k * r)) + (1j / (self.k ** 2 * r ** 2)) + (1 / (self.k ** 3 * r ** 3))
@@ -241,6 +323,16 @@ class MagneticFieldSimulation:
         return res
 
     def calculer_Hr(self, x, y, z, I):
+        """
+        Calcule la composante radiale du champ magnétique.
+
+        Parameters:
+        x, y, z (float): Coordonnées du point.
+        I (float): Intensité moyenne I.
+
+        Returns:
+        float: Composante radiale Hr.
+        """
         if x == 0 and y == 0 and z == 0:
             return 0
         r, theta, phi = self.calcul_r_teta_phi(x, y, z)
@@ -254,6 +346,16 @@ class MagneticFieldSimulation:
         return Hr
 
     def calculer_Htheta(self, x, y, z, I):
+        """
+        Calcule la composante transversale du champ magnétique.
+
+        Parameters:
+        x, y, z (float): Coordonnées du point.
+        I (float): Intensité moyenne I.
+
+        Returns:
+        float: Composante transversale Htheta.
+        """
         if x == 0 and y == 0 and z == 0:
             return 0
         r, theta, phi = self.calcul_r_teta_phi(x, y, z)
@@ -267,12 +369,41 @@ class MagneticFieldSimulation:
         return Htheta
 
     def convertir_spherique_to_cartesien(self, Hr, Htheta, Hphi, r, theta, phi):
+        """
+        Convertit un vecteur de champ magnétique exprimé en coordonnées sphériques (Hr, Htheta, Hphi)
+        en coordonnées cartésiennes (Hx, Hy, Hz).
+
+        Parameters:
+        Hr (float): Composante radiale du champ magnétique.
+        Htheta (float): Composante polaire du champ magnétique.
+        Hphi (float): Composante azimutale du champ magnétique.
+        r (float): Rayon sphérique (souvent non nécessaire pour la conversion sans échelle).
+        theta (float): Angle polaire en radians.
+        phi (float): Angle azimutal en radians.
+
+        Returns:
+        tuple: Coordonnées cartésiennes du champ magnétique (Hx, Hy, Hz).
+        """
         x = Hr * np.sin(theta) * np.cos(phi) + Htheta * np.cos(theta) * np.cos(phi) - Hphi * np.sin(phi)
         y = Hr * np.sin(theta) * np.sin(phi) + Htheta * np.cos(theta) * np.sin(phi) + Hphi * np.cos(phi)
         z = Hr * np.cos(theta) - Htheta * np.sin(theta)
         return x, y, z
 
     def convertir_cartesien_to_spherique(self, Hx, Hy, Hz, theta, phi):
+        """
+        Convertit un vecteur de champ magnétique exprimé en coordonnées cartésiennes (Hx, Hy, Hz)
+        en coordonnées sphériques (Hr, Htheta, Hphi).
+
+        Parameters:
+        Hx (float): Composante x du champ magnétique.
+        Hy (float): Composante y du champ magnétique.
+        Hz (float): Composante z du champ magnétique.
+        theta (float): Angle polaire en radians.
+        phi (float): Angle azimutal en radians.
+
+        Returns:
+        tuple: Coordonnées sphériques du champ magnétique (Hr, Htheta, Hphi).
+        """
         Hr = Hx * np.sin(theta) * np.cos(phi) + Hy * np.sin(theta) * np.sin(phi) + Hz * np.cos(theta)
         Htheta = Hx * np.cos(theta) * np.cos(phi) + Hy * np.cos(theta) * np.sin(phi) - Hz * np.sin(theta)
         Hphi = -Hx * np.sin(phi) + Hy * np.cos(phi)

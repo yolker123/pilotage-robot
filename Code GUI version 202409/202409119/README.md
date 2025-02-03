@@ -29,7 +29,7 @@ Développé par :
 ├── control_robot.bat
 ├── ConvertFormats.py
 ├── lecroy.py                       # Toutes les fonctions relatives à l'oscilloscope LECROY
-├── MagneticFieldSimulation.py
+├── MagneticFieldCalculation.py
 ├── MainWindow.py                   # Fenêtre principale
 ├── MeasureSetupPopup.py
 ├── NewWindowWithData.py            # Fenêtre de visualisation "Algo"

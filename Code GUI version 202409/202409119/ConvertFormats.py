@@ -1,3 +1,11 @@
+"""!
+ * @file        GraphicsTab.py
+ * @brief       Methods for converting measurements made with lecroy to the same format as tektronix
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @version     0.1
+ * @date        2025
+"""
+
 import os
 import re
 import sys

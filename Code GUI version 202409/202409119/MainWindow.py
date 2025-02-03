@@ -15,7 +15,7 @@ from concurrent.futures import Future
 
 
 from MeasureSetupPopup import *
-from NewWindowWithData import MagneticFieldApp
+from GraphicsTab import GraphicsTab
 from tektronix import *
 from ConvertFormats import convert_formats
 
@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget()
         tabs.addTab(centralArea, "Mesures")
-        self.mfa = MagneticFieldApp()
+        self.mfa = GraphicsTab()
         tabs.addTab(self.mfa, "Algo")
 
         self.setCentralWidget(tabs)  # The defaut value of centralArea is set in self.resize(1200, 800)

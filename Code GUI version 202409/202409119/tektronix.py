@@ -1,3 +1,11 @@
+"""!
+ * @file        tektronix.py
+ * @brief       Contains methods for connecting, configuring and measuring with the Tektronix oscilloscope.
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @version     0.1
+ * @date        2025
+"""
+
 import atexit
 
 import datetime
@@ -10,21 +18,20 @@ import os
 import time
 from bddSetupOscilloscope import *
 
-# Initialisation des paramètres
+# Configuration initiale
 OSCILLOSCOPE_IP = "172.16.115.218"
 visa_address = f"TCPIP::{OSCILLOSCOPE_IP}::INSTR"
-num_runs = 1
 
-# measurement_types = ["PK2PK", "MEAN", "MAXIMUM", "MINIMUM", "RMS", "PERIOD", "AMPLITUDE", "FREQUENCY"]
-# channels = ['CH1', 'CH2', 'CH3']
-
-pwd = os.getcwd()
+pwd = os.getcwd() # Répertoire de travail actuel
 
 
-global wf_img_config
+global wf_img_config # Configuration globale pour les captures
 
 class Tektronix:
     def __init__(self):
+        """
+        Initialise les variables nécessaires pour interagir avec l'oscilloscope Tektronix.
+        """
         self.header_line = None
         self.scope = None
         self.measurement_number = None
@@ -34,6 +41,9 @@ class Tektronix:
         self.current_time_str = None
 
     def init_connection(self):
+        """
+        Initialise la connexion avec l'oscilloscope, réessaye si nécessaire en cas d'échec.
+        """
         self.measurement_number = 0
         while self.scope is None:
             try:
@@ -54,6 +64,9 @@ class Tektronix:
 
     # Fonction pour mesurer les tensions maximales
     def measure_channels(self):
+        """
+        Mesure les mesures moyenne sur les canaux configurés et retourne les résultats.
+        """
         result = []
         for idx in range(self.measurement_number):
             max_voltage = self.scope.commands.measurement.meas[idx + 1].results.currentacq.mean.query()
@@ -62,7 +75,9 @@ class Tektronix:
         return result
 
     def set_parameters(self, config):
-
+        """
+        Définit les paramètres d'acquisition selon la configuration fournie.
+        """
         self.scope.commands.acquire.state.write("OFF")
         self.scope.commands.acquire.mode.write("Sample")
         # Dictionnaires pour stocker les mesures par canal
@@ -113,12 +128,16 @@ class Tektronix:
         print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
 
+        # Préparer les en-têtes des fichiers de mesure
         headers = ["Timestamp","X","Y","Z"]  # Les en-têtes fixes
         headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
         self.header_line = ",".join(headers) + "\n"
 
 
     def get_measures(self, x, y, z):
+        """
+        Lance une mesure sur les canaux configurés et enregistre les résultats dans un fichier.
+        """
         # print(f"Run {run + 1}/{num_runs}")
         self.scope.commands.acquire.state.write("ON")
 
@@ -134,14 +153,13 @@ class Tektronix:
         for value in values:
             data_line_str += f", {value['value']}"
 
-#        data_line = [timestamp, x, y, z, values[0]['value'], values[1]['value'], values[2]['value']]
- #       data_line_str = ", ".join(map(str, data_line))
-
+        # Écrire les valeurs mesurées dans le fichier
         with open(self.filename, 'a') as f:
             f.write(data_line_str + "\n")
 
         print(f"Les valeurs maximales ont été sauvegardées dans {self.filename}")
 
+        # Gestion des fichiers pour les captures d'écran et formes d'ondes
         self.scope.write('FILESystem:MOUNT:DRIVE "L:;192.168.30.31;')
 
         if 'wf_img_config' in globals():
@@ -149,7 +167,6 @@ class Tektronix:
                 if it.get("wf"):
                     waveform_directory = "C:/Users/Public/Tektronix/TekScope/WaveForm/"
                     waveform_directory_measures = waveform_directory + f"logWaveform_tektronix_{self.current_time_str}/"
-                    waveform_directory_measures_channel = waveform_directory_measures + kt + "/"
                     cwd_command_waveform = 'FILESystem:CWD "C:/Users/Public/Tektronix/TekScope/WaveForm"'
                     create_directory_command_waveform = 'FILESystem:MKDir "' + waveform_directory_measures + '"'
                     cwd_command_waveform_subfolder = 'FILESystem:CWD "' + waveform_directory_measures + '"'
@@ -161,7 +178,7 @@ class Tektronix:
                     self.scope.write(create_directory_command_waveform2)
                     self.scope.write(cwd_command_waveform_subfolder2)
                     print("waveform activé pour le canal", kt)
-                    self.captureWF_tektronix(waveform_directory_measures, kt, f"{x},{y},{z}")
+                    self.captureWF_tektronix(kt, f"{x},{y},{z}")
 
                 if it.get("img"):
                     self.scope.commands.acquire.state.write("OFF")
@@ -186,13 +203,26 @@ class Tektronix:
 
         return values
     def create_file(self, hauteur):
+        """
+        Crée un fichier CSV pour sauvegarder les mesures et écrit l'en-tête des colonnes.
+
+        Parameters:
+        hauteur (str): Utilisé pour faire fonctionner l'algorithme non linéaire qui a besoin de la hauteur du robot au moment de la mesure.
+        """
         # Ouvrir le fichier pour écrire l'en-tête
         self.current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
         self.filename = os.path.join(pwd, "Measure", f"MaxAmp_{self.current_time_str}_{hauteur}.csv")
         with open(self.filename, 'w') as f:
             f.write(self.header_line)
 
-    def captureWF_tektronix(self, acquisition_directory, chan, nomPoint):
+    def captureWF_tektronix(self, chan, nomPoint):
+        """
+        Capture la forme d'onde pour un canal donné et sauvegarde le fichier.
+
+        Parameters:
+        chan (str): Identifiant du canal (e.g., "C1", "C2").
+        nomPoint (str): Point de mesure actuel (inclut les coordonnées x, y, z).
+        """
         channel_map = {
             "C1": "CH1",
             "C2": "CH2",
@@ -211,6 +241,14 @@ class Tektronix:
 
 
     def captureScreen_tektronix(self, acquisition_directory, chan, nomPoint):
+            """
+            Capture une capture d'écran pour un canal donné et sauve le fichier image.
+
+            Parameters:
+            acquisition_directory (str): Répertoire où stocker le fichier.
+            chan (str): Identifiant du canal (e.g., "C1", "C2").
+            nomPoint (str): Point de mesure actuel (inclut les coordonnées x, y, z).
+            """
             current_time = datetime.datetime.now()
             instant = current_time.strftime('%Y-%m-%d_%H-%M-%S')
             screenshot_filename = f"logScreenshot_tektronix_{chan}_{nomPoint}_{instant}.png"

@@ -1,3 +1,11 @@
+"""!
+ * @file        lecroy.py
+ * @brief       Contains methods for connecting, configuring and measuring with the Lecroy oscilloscope.
+ * @author      Lisa Duterte | Romain Derrien | Clement Rouvier | Elsa Della Valle
+ * @version     0.1
+ * @date        2023
+"""
+
 #!/usr/bin/python
 import datetime
 import time

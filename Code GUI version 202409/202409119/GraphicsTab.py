@@ -1,3 +1,11 @@
+"""!
+ * @file        GraphicsTab.py
+ * @brief       Class corresponding to the graphics tab containing these display and update methods
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @version     0.1
+ * @date        2025
+"""
+
 import os
 import sys
 import numpy as np
@@ -12,12 +20,15 @@ from PyQt5.QtCore import Qt, QTimer
 
 from scipy.interpolate import griddata
 
-from MagneticFieldSimulation import MagneticFieldSimulation
+from MagneticFieldCalculation import MagneticFieldCalculation
 import math
 
 
-class MagneticFieldApp(QWidget):
+class GraphicsTab(QWidget):
     def __init__(self):
+        """
+        Initialise le widget d'onglet graphique avec des méthodes pour l'affichage et les mises à jour.
+        """
         super().__init__()
         self.setWindowTitle("Simulation du Champ Magnétique")
 
@@ -31,17 +42,21 @@ class MagneticFieldApp(QWidget):
 
         # Variable
 
-        self.simulation = MagneticFieldSimulation(resolution=1)
+        self.simulation = MagneticFieldCalculation(resolution=1)
         self.initUI()
 
     def initUI(self):
+        """
+        Initialise l'interface utilisateur en créant différents onglets.
+        """
         self.create_tab_3d_vectors()
         self.add_tab_2d_plane()
         self.add_tab_gaussian_and_radial()
 
     def select_file(self):
-        # Ouvrir une boîte de dialogue pour sélectionner un fichier
-        # Open file dialog for saving
+        """
+        Ouvre une boîte de dialogue pour sélectionner un fichier, puis commence à lire le fichier sélectionné.
+        """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         file_path, _ = QFileDialog.getOpenFileName(
@@ -61,13 +76,27 @@ class MagneticFieldApp(QWidget):
             self.update_all_graphs()
 
     def get_hrobot_from_filename(self, file_path):
+        """
+        Extrait la valeur hRobot d'un nom de fichier donné.
+
+        Parameters:
+        file_path (str): Chemin du fichier CSV.
+
+        Returns:
+        str: Valeur extraite après le dernier underscore '_' dans le nom du fichier.
+        """
         filename = os.path.basename(file_path)  # Récupérer le nom du fichier sans le chemin
         name_without_extension = filename.split('.csv')[0]  # Enlever l'extension .csv
         value = name_without_extension.rsplit('_', 1)[-1]  # Récupérer la partie après le dernier '_'
         return value
 
     def start_reading_file(self, file_path):
-        # Vérifier que le fichier peut être ouvert
+        """
+        Lit un fichier et procède à l'analyse des mesures contenues.
+
+        Parameters:
+        file_path (str): Chemin du fichier CSV.
+        """
         lines = None
         try:
             with open(file_path, 'r') as file:
@@ -99,6 +128,14 @@ class MagneticFieldApp(QWidget):
 
 
     def set_resolution(self, resolution_value, dialog, algorithm):
+        """
+        Définit la résolution de simulation, en utilisant l'algorithme spécifié.
+
+        Parameters:
+        resolution_value (str): Nouvelle valeur de résolution entrée par l'utilisateur.
+        dialog (QDialog): Dialogue de saisie de résolution.
+        algorithm (str): Type d'algorithme à utiliser ("linear" ou "non-linear").
+        """
         try:
             resolution_value = int(resolution_value)
             self.simulation.resolution = resolution_value  # Modifier la résolution de la simulation
@@ -118,6 +155,9 @@ class MagneticFieldApp(QWidget):
             print("Veuillez entrer un nombre entier valide.")
 
     def update_all_graphs(self):
+        """
+        Met à jour tous les graphiques de chaque onglet.
+        """
         self.update_tab_2d_plane()  # Mettre à jour les graphiques 2D
         self.update_tab_gaussian_and_radial()  # Mettre à jour les graphiques 3D
         self.plot_3d_vectors()  # Mettre à jour les vecteurs 3D
@@ -127,12 +167,18 @@ class MagneticFieldApp(QWidget):
         self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
 
     def clear_all_graphs(self):
+        """
+        Efface tous les points de mesure et réinitialise les graphiques.
+        """
         self.simulation.points_haute_resolution = []
         self.simulation.measuredPoints = []
         self.label_file_path.setText("")
         self.update_all_graphs()
 
     def create_tab_3d_vectors(self):
+        """
+        Crée l'onglet d'affichage 3D des vecteurs.
+        """
         """Onglet 1 : Affichage 3D des vecteurs."""
         self.tab_3d = QWidget()  # Créer un attribut pour l'onglet afin de pouvoir le mettre à jour
         layout = QVBoxLayout()
@@ -178,7 +224,9 @@ class MagneticFieldApp(QWidget):
         self.add_vector_filter_layout(layout)
 
     def add_vector_filter_layout(self, layout):
-        """Add filter controls for 3D vector visualization."""
+        """
+        Ajoute un ensemble de contrôles de filtre pour la visualisation des vecteurs 3D.
+        """
         filter_layout = QHBoxLayout()
 
         # Filter type selector
@@ -214,7 +262,9 @@ class MagneticFieldApp(QWidget):
         layout.addLayout(filter_layout)
 
     def apply_vector_filter(self):
-        """Apply filter to 3D vector plot based on selected criteria."""
+        """
+        Applique un filtre au tracé vectoriel 3D basé sur les critères sélectionnés.
+        """
         filter_type = self.filter_type_selector.currentText()
 
         # Get min and max values, defaulting to None if not provided
@@ -288,7 +338,9 @@ class MagneticFieldApp(QWidget):
         self.update_all_graphs()
 
     def plot_3d_vectors(self):
-        """Dessine les vecteurs 3D dans l'onglet correspondant."""
+        """
+        Trace les vecteurs 3D sur l'onglet correspondant.
+        """
         self.ax_3d.clear()  # Effacer les anciens vecteurs
 
         # Données pour les vecteurs
@@ -384,6 +436,9 @@ class MagneticFieldApp(QWidget):
         self.tabs.addTab(tab, title)
 
     def open_resolution_dialog(self):
+        """
+        Ouvre une boîte de dialogue pour changer la résolution de la simulation.
+        """
         dialog = QDialog(self)
         dialog.setWindowTitle("Modifier la Résolution")
 
