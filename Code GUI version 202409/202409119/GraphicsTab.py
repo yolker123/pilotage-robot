@@ -1,7 +1,7 @@
 """!
  * @file        GraphicsTab.py
  * @brief       Class corresponding to the graphics tab containing these display and update methods
- * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony | MULLOT Agathe
  * @version     0.1
  * @date        2025
 """
