@@ -1,7 +1,7 @@
 """!
  * @file        MagneticFieldCalculation.py
  * @brief       Class applies linear and non-linear algorithms and manages file import
- * @author      DEVAUX Baptiste | VOLPELLIERE Anthony
+ * @author      DEVAUX Baptiste | VOLPELLIERE Anthony | MULLOT Agathe
  * @version     0.1
  * @date        2025
 """
