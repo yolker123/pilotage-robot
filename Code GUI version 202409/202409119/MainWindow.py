@@ -995,8 +995,8 @@ class MainWindow(QMainWindow):
              self.customSemisphere],
             [f"image: url({ASSETS_FOLDER}measure.png)", f"image: url({ASSETS_FOLDER}nfc.jpg)",
              f"image: url({ASSETS_FOLDER}emvco.jpg)", f"image: url({ASSETS_FOLDER}cube.png)",
-             f"image: url({ASSETS_FOLDER}point.png)", f"image: url({ASSETS_FOLDER}point.png)",
-             f"image: url({ASSETS_FOLDER}point.png)"]
+             f"image: url({ASSETS_FOLDER}point.png)", f"image: url({ASSETS_FOLDER}cylindre.png)",
+             f"image: url({ASSETS_FOLDER}semi-sphere.png)"]
         ]
 
     """
