@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QVBoxLayout, QWidget,
-    QHBoxLayout, QLabel, QComboBox, QPushButton, QFileDialog, QRadioButton, QButtonGroup
+    QHBoxLayout, QLabel, QComboBox, QPushButton, QFileDialog, QRadioButton, QButtonGroup, QSlider
 )
 from PyQt5.QtWidgets import QDialog, QLineEdit, QPushButton, QVBoxLayout, QFormLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -30,6 +30,8 @@ class GraphicsTab(QWidget):
         Initialise le widget d'onglet graphique avec des méthodes pour l'affichage et les mises à jour.
         """
         super().__init__()
+        self.scale_input_3d = None
+        self.scale_input_2d = None
         self.setWindowTitle("Simulation du Champ Magnétique")
 
         # Layout principal
@@ -41,6 +43,8 @@ class GraphicsTab(QWidget):
         layout.addWidget(self.tabs)
 
         # Variable
+        self.vector_scale_2d = 12
+        self.vector_length_3d = 1
 
         self.simulation = MagneticFieldCalculation(resolution=1)
         self.initUI()
@@ -219,9 +223,60 @@ class GraphicsTab(QWidget):
 
         # Ajouter le layout des boutons au layout principal (vertical)
         layout.addLayout(button_layout)
+
+        scale_layout = self.create_scale_layout("3D")
+        layout.addLayout(scale_layout)
+
         layout.addWidget(self.canvas_3d)
         self.tabs.addTab(self.tab_3d, "Vecteurs 3D")
         self.add_vector_filter_layout(layout)
+
+    def create_scale_layout(self, dimension):
+        """
+        Crée le layout en fonction de la dimension en reprenant la bonne fonction
+        """
+        scale_layout = QHBoxLayout()
+        scale_label = QLabel("Échelle :")
+        scale_input = QLineEdit()
+        scale_value_label = QLabel()
+        scale_button = QPushButton("Valider")
+
+        scale_label.setFixedSize(75, 25)
+        scale_input.setFixedSize(50, 25)  # Définit une taille fixe pour éviter qu'il prenne trop de place
+        scale_value_label.setFixedSize(50, 25)
+        scale_button.setFixedSize(70, 25)
+
+        if dimension == "2D":
+            scale_input.setText(str(self.vector_scale_2d))
+            scale_value_label.setText(str(self.vector_scale_2d))
+            scale_button.clicked.connect(lambda: self.update_scale_2d(float(scale_input.text())))
+            self.scale_input_2d = scale_input
+        else:
+            scale_input.setText(str(self.vector_length_3d))
+            scale_value_label.setText(str(self.vector_length_3d))
+            scale_button.clicked.connect(lambda: self.update_scale_3d(float(scale_input.text())))
+            self.scale_input_3d = scale_input
+
+        scale_layout.addWidget(scale_label)
+        scale_layout.addWidget(scale_input)
+        scale_layout.addWidget(scale_button)
+
+        scale_layout.setAlignment(Qt.AlignLeft)
+        return scale_layout
+
+    def update_scale_2d(self, value):
+        """
+        Met à jour l'échelle des graphiques 2D.
+        """
+        self.vector_scale_2d = value
+        self.update_all_graphs()
+
+    def update_scale_3d(self, value):
+        """
+        Met à jour l'échelle des graphiques 3D.
+        """
+        self.vector_length_3d = value
+        self.update_all_graphs()
 
     def add_vector_filter_layout(self, layout):
         """
@@ -352,13 +407,13 @@ class GraphicsTab(QWidget):
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=1, normalize=True)
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d, normalize=True)
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=1, normalize=True)
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=self.vector_length_3d, normalize=True)
 
         # Configurer les axes
         self.ax_3d.set_title("Vecteurs 3D du champ magnétique")
@@ -412,7 +467,8 @@ class GraphicsTab(QWidget):
         selector_layout.addWidget(resolution_button, alignment=Qt.AlignLeft)
 
         layout.addLayout(selector_layout)
-
+        scale_layout = self.create_scale_layout("2D")
+        layout.addLayout(scale_layout)
         # Initialiser les attributs pour les sélecteurs
         if title == "Champ dans le plan 2D":
             self.plane_selector_2d = plane_selector
@@ -610,7 +666,7 @@ class GraphicsTab(QWidget):
             self.figure_2d.clear()
             ax = self.figure_2d.add_subplot(111)
             scatter = ax.scatter(coord1, coord2, c=H_total, cmap='viridis', edgecolor='k')
-            ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=12)
+            ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=self.vector_scale_2d)
             ax.set_title(f"Points sur le plan {plane}")
             if plane == "x":
                 ax.set_xlabel(f'y (m)')
@@ -652,7 +708,7 @@ class GraphicsTab(QWidget):
         self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
         ax2 = self.figure_2d.add_subplot(gs[0, 2])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
-                            scale=12)
+                            scale=self.vector_scale_2d)
         ax2.set_title(f"Direction du champ magnétique sur le plan {plane}")
         if plane == "x":
             ax2.set_xlabel(f'y (m)')
@@ -731,7 +787,7 @@ class GraphicsTab(QWidget):
         self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
 
         ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=12)
+        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=self.vector_scale_2d)
         ax2.set_title(f"Champ vectoriel sur le plan {plane}")
         if plane == "x":
             ax2.set_xlabel(f'y (m)')

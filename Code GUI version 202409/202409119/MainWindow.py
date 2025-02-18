@@ -685,7 +685,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -719,7 +719,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -825,7 +825,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir,self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName,self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -868,7 +868,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
