@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QVBoxLayout, QWidget,
-    QHBoxLayout, QLabel, QComboBox, QPushButton, QFileDialog, QRadioButton, QButtonGroup, QSlider
+    QHBoxLayout, QLabel, QComboBox, QPushButton, QFileDialog, QRadioButton, QButtonGroup, QSlider, QCheckBox
 )
 from PyQt5.QtWidgets import QDialog, QLineEdit, QPushButton, QVBoxLayout, QFormLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -30,6 +30,9 @@ class GraphicsTab(QWidget):
         Initialise le widget d'onglet graphique avec des méthodes pour l'affichage et les mises à jour.
         """
         super().__init__()
+        self.normalize_button_3D = None
+        self.normalize_button_2D = None
+        self.normalize_buttons_2D = []
         self.scale_input_3d = None
         self.scale_input_2d = None
         self.setWindowTitle("Simulation du Champ Magnétique")
@@ -227,6 +230,11 @@ class GraphicsTab(QWidget):
         scale_layout = self.create_scale_layout("3D")
         layout.addLayout(scale_layout)
 
+        self.normalize_button_3D = QCheckBox("Normaliser les vecteurs")
+        self.normalize_button_3D.setChecked(False)  # Valeur par défaut : False
+        layout.addWidget(self.normalize_button_3D)
+        self.normalize_button_3D.stateChanged.connect(self.update_all_graphs)
+
         layout.addWidget(self.canvas_3d)
         self.tabs.addTab(self.tab_3d, "Vecteurs 3D")
         self.add_vector_filter_layout(layout)
@@ -241,11 +249,12 @@ class GraphicsTab(QWidget):
         scale_value_label = QLabel()
         scale_button = QPushButton("Valider")
 
+        info_label = QLabel("3D : Higher is bigger / 2D Higher is smaller :")
         scale_label.setFixedSize(75, 25)
         scale_input.setFixedSize(50, 25)  # Définit une taille fixe pour éviter qu'il prenne trop de place
         scale_value_label.setFixedSize(50, 25)
         scale_button.setFixedSize(70, 25)
-
+        info_label.setFixedSize(500, 25)
         if dimension == "2D":
             scale_input.setText(str(self.vector_scale_2d))
             scale_value_label.setText(str(self.vector_scale_2d))
@@ -260,6 +269,7 @@ class GraphicsTab(QWidget):
         scale_layout.addWidget(scale_label)
         scale_layout.addWidget(scale_input)
         scale_layout.addWidget(scale_button)
+        scale_layout.addWidget(info_label)
 
         scale_layout.setAlignment(Qt.AlignLeft)
         return scale_layout
@@ -407,13 +417,13 @@ class GraphicsTab(QWidget):
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d, normalize=True)
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d, normalize=self.normalize_button_3D.isChecked())
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=self.vector_length_3d, normalize=True)
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=self.vector_length_3d, normalize=self.normalize_button_3D.isChecked())
 
         # Configurer les axes
         self.ax_3d.set_title("Vecteurs 3D du champ magnétique")
@@ -469,6 +479,13 @@ class GraphicsTab(QWidget):
         layout.addLayout(selector_layout)
         scale_layout = self.create_scale_layout("2D")
         layout.addLayout(scale_layout)
+
+        self.normalize_button_2D = QCheckBox("Normaliser les vecteurs")
+        self.normalize_button_2D.setChecked(False)  # Valeur par défaut : False
+        self.normalize_button_2D.stateChanged.connect(self.sync_checkboxes_2D)
+        layout.addWidget(self.normalize_button_2D)
+
+        self.normalize_buttons_2D.append(self.normalize_button_2D)
         # Initialiser les attributs pour les sélecteurs
         if title == "Champ dans le plan 2D":
             self.plane_selector_2d = plane_selector
@@ -490,6 +507,15 @@ class GraphicsTab(QWidget):
 
         # Ajouter l'onglet
         self.tabs.addTab(tab, title)
+
+    def sync_checkboxes_2D(self, state):
+        """Synchronise toutes les cases de normalisation 2D."""
+        for checkbox in self.normalize_buttons_2D:
+            checkbox.blockSignals(True)  # Évite une boucle infinie
+            checkbox.setChecked(state)
+            checkbox.blockSignals(False)
+
+        self.update_all_graphs()
 
     def open_resolution_dialog(self):
         """
@@ -806,8 +832,30 @@ class GraphicsTab(QWidget):
         """Filtre les points selon le plan et la valeur donnée."""
         return [p for p in self.simulation.points_haute_resolution if abs(p[plane] - value) < epsilon]
 
+    # def prepare_plot_data(self, filtered_points, plane):
+    #     """Prépare les données de tracé pour les graphiques."""
+    #     axes_vars = {'x': ['y', 'z'], 'y': ['x', 'z'], 'z': ['x', 'y']}
+    #     axis1, axis2 = axes_vars[plane]
+    #
+    #     coord1 = np.array([p[axis1] for p in filtered_points])
+    #     coord2 = np.array([p[axis2] for p in filtered_points])
+    #
+    #     H_total = np.sqrt(
+    #         np.array([p['Hx'] for p in filtered_points]) ** 2 +
+    #         np.array([p['Hy'] for p in filtered_points]) ** 2 +
+    #         np.array([p['Hz'] for p in filtered_points]) ** 2
+    #     )
+    #     H_component1 = np.array([p[f'H{axis1}'] for p in filtered_points])
+    #     H_component2 = np.array([p[f'H{axis2}'] for p in filtered_points])
+    #
+    #     with np.errstate(divide='ignore', invalid='ignore'):
+    #         H_component1_normalized = np.where(H_total != 0, H_component1 / H_total, 0)
+    #         H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
+    #
+    #     return coord1, coord2, H_total, H_component1_normalized, H_component2_normalized
+
     def prepare_plot_data(self, filtered_points, plane):
-        """Prépare les données de tracé pour les graphiques."""
+        """Prépare les données de tracé pour les graphiques 2D en fonction de la normalisation."""
         axes_vars = {'x': ['y', 'z'], 'y': ['x', 'z'], 'z': ['x', 'y']}
         axis1, axis2 = axes_vars[plane]
 
@@ -822,8 +870,9 @@ class GraphicsTab(QWidget):
         H_component1 = np.array([p[f'H{axis1}'] for p in filtered_points])
         H_component2 = np.array([p[f'H{axis2}'] for p in filtered_points])
 
-        with np.errstate(divide='ignore', invalid='ignore'):
-            H_component1_normalized = np.where(H_total != 0, H_component1 / H_total, 0)
-            H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
+        if self.normalize_button_2D.isChecked():
+            with np.errstate(divide='ignore', invalid='ignore'):
+                H_component1 = np.where(H_total != 0, H_component1 / H_total, 0)
+                H_component2 = np.where(H_total != 0, H_component2 / H_total, 0)
 
-        return coord1, coord2, H_total, H_component1_normalized, H_component2_normalized
+        return coord1, coord2, H_total, H_component1, H_component2

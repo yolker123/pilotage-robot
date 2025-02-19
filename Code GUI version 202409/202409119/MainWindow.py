@@ -294,9 +294,23 @@ class MainWindow(QMainWindow):
         # btn_widgetAxes.setGeometry(0, 170, 400, 50)
         grid_btnAxes2.addWidget(self.buttonRobot5Axes, 1, 0)  # add widgets to ths gridlayout
         grid_btnAxes2.addWidget(self.buttonRobot6Axes, 1, 1)
+
+        self.toastConnected = QPushButton("Connected")
+        self.toastConnected.clicked.connect(self.toast1)
+
+        self.toastSetup = QPushButton("SetupDone")
+        self.toastSetup.clicked.connect(self.toast2)
+        grid_btnAxes2.addWidget(self.toastConnected, 2, 0)  # add widgets to ths gridlayout
+        grid_btnAxes2.addWidget(self.toastSetup, 2, 1)
+
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon("icon.png"))  # Remplace "icon.png" par une icône valide
+        self.tray_icon.show()  # Obligatoire pour que les notifications fonctionnent
+
         btn_widgetAxes2.setLayout(
             grid_btnAxes2)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
         # setLayout is to display the buttons, if not the button you set will not display on the screen
+
 
         # button to connect robot
         self.buttonConnectRobot = QPushButton('Robot Initialization')
@@ -1400,6 +1414,44 @@ class MainWindow(QMainWindow):
         self.label_theta_points.setText("Circle points :")
         self.label_z_points.setText("Layers :")
 
+    # def toast1(self):
+    #     success = self.check_connection()
+    #     if success:
+    #         QMessageBox.information(self, "Status", "Connected Successfully!")
+    #     else:
+    #         QMessageBox.critical(self, "Status", "Connection Failed!")
+    #
+    # def toast2(self):
+    #     success = self.check_setup()
+    #     if success:
+    #         QMessageBox.information(self, "Status", "Setup Completed Successfully!")
+    #     else:
+    #         QMessageBox.critical(self, "Status", "Setup Failed!")
+    def show_notification(self, title, message):
+        """ Affiche une notification en bas à droite qui disparaît après 5 secondes """
+        self.tray_icon.showMessage(title, message, QSystemTrayIcon.Information, 5000)
+
+    def toast1(self):
+        success = self.check_connection()
+        if success:
+            self.show_notification("Status", "Connected Successfully!")
+        else:
+            self.show_notification("Status", "Connection Failed!")
+
+    def toast2(self):
+        success = self.check_setup()
+        if success:
+            self.show_notification("Status", "Setup Completed Successfully!")
+        else:
+            self.show_notification("Status", "Setup Failed!")
+
+    def check_connection(self):
+        # Simuler un test de connexion (True = succès, False = échec)
+        return True  # Remplacez par la logique réelle
+
+    def check_setup(self):
+        # Simuler un test de setup (True = succès, False = échec)
+        return False  # Remplacez par la logique réelle
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)  #
