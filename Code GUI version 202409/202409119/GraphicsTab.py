@@ -832,28 +832,6 @@ class GraphicsTab(QWidget):
         """Filtre les points selon le plan et la valeur donnée."""
         return [p for p in self.simulation.points_haute_resolution if abs(p[plane] - value) < epsilon]
 
-    # def prepare_plot_data(self, filtered_points, plane):
-    #     """Prépare les données de tracé pour les graphiques."""
-    #     axes_vars = {'x': ['y', 'z'], 'y': ['x', 'z'], 'z': ['x', 'y']}
-    #     axis1, axis2 = axes_vars[plane]
-    #
-    #     coord1 = np.array([p[axis1] for p in filtered_points])
-    #     coord2 = np.array([p[axis2] for p in filtered_points])
-    #
-    #     H_total = np.sqrt(
-    #         np.array([p['Hx'] for p in filtered_points]) ** 2 +
-    #         np.array([p['Hy'] for p in filtered_points]) ** 2 +
-    #         np.array([p['Hz'] for p in filtered_points]) ** 2
-    #     )
-    #     H_component1 = np.array([p[f'H{axis1}'] for p in filtered_points])
-    #     H_component2 = np.array([p[f'H{axis2}'] for p in filtered_points])
-    #
-    #     with np.errstate(divide='ignore', invalid='ignore'):
-    #         H_component1_normalized = np.where(H_total != 0, H_component1 / H_total, 0)
-    #         H_component2_normalized = np.where(H_total != 0, H_component2 / H_total, 0)
-    #
-    #     return coord1, coord2, H_total, H_component1_normalized, H_component2_normalized
-
     def prepare_plot_data(self, filtered_points, plane):
         """Prépare les données de tracé pour les graphiques 2D en fonction de la normalisation."""
         axes_vars = {'x': ['y', 'z'], 'y': ['x', 'z'], 'z': ['x', 'y']}
