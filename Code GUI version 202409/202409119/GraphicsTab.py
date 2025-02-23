@@ -244,7 +244,7 @@ class GraphicsTab(QWidget):
         Crée le layout en fonction de la dimension en reprenant la bonne fonction
         """
         scale_layout = QHBoxLayout()
-        scale_label = QLabel("Échelle :")
+        scale_label = QLabel("Vector scale :")
         scale_input = QLineEdit()
         scale_value_label = QLabel()
         scale_button = QPushButton("Valider")
@@ -618,7 +618,7 @@ class GraphicsTab(QWidget):
         # Sélecteur de plan
         plane_label = QLabel("Plan:")
         plane_selector = QComboBox()
-        plane_selector.addItems(['x', 'y', 'z'])
+        plane_selector.addItems(['y,z', 'x,z', 'x,y'])
         plane_selector.currentTextChanged.connect(plane_callback)
         plane_selector.setMinimumWidth(75)  # Réglez la largeur minimale si besoin
 
@@ -655,9 +655,15 @@ class GraphicsTab(QWidget):
             if p not in self.simulation.points_haute_resolution:
                 self.simulation.points_haute_resolution.append(p)
 
-        if plane in ['x', 'y', 'z']:
+        if plane == 'x,y':
+            axe = 'z'
+        if plane == 'x,z':
+            axe = 'y'
+        if plane == 'y,z':
+            axe = 'x'
+        if axe in ['x', 'y', 'z']:
             # Extraire les valeurs uniques arrondies
-            raw_values = [p[plane] for p in self.simulation.points_haute_resolution]
+            raw_values = [p[axe] for p in self.simulation.points_haute_resolution]
             unique_values = sorted(np.unique([round(v, 5) for v in raw_values]))
         else:
             unique_values = []
@@ -671,6 +677,13 @@ class GraphicsTab(QWidget):
     def update_tab_2d_plane(self):
         """Met à jour les graphiques de l'onglet Champ dans le plan 2D."""
         plane = self.plane_selector_2d.currentText()
+        if plane == "x,y":
+            axe = "z"
+        if plane == "x,z":
+            axe = "y"
+        if plane == "y,z":
+            axe = "x"
+        print(axe)
         if self.value_selector_2d.count() == 0:
             return
 
@@ -679,12 +692,12 @@ class GraphicsTab(QWidget):
         except ValueError:
             return
 
-        filtered_points = self.filter_points(plane, value)
+        filtered_points = self.filter_points(axe, value)
         if not filtered_points or len(filtered_points) < 3:  # Ensure enough points for a plane
-            print(f"Aucun point trouvé pour le plan {plane}={value}, ou pas assez de points.")
+            print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
-        coord1, coord2, H_total, H_component1_norm, H_component2_norm = self.prepare_plot_data(filtered_points, plane)
+        coord1, coord2, H_total, H_component1_norm, H_component2_norm = self.prepare_plot_data(filtered_points, axe)
 
         # If there are not enough points to interpolate smoothly, do a scatter plot
         if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
@@ -693,17 +706,17 @@ class GraphicsTab(QWidget):
             ax = self.figure_2d.add_subplot(111)
             scatter = ax.scatter(coord1, coord2, c=H_total, cmap='viridis', edgecolor='k')
             ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=self.vector_scale_2d)
-            ax.set_title(f"Points sur le plan {plane}")
-            if plane == "x":
-                ax.set_xlabel(f'y (m)')
-                ax.set_ylabel(f'z (m)')
-            if plane == "y":
-                ax.set_xlabel(f'x (m)')
-                ax.set_ylabel(f'z (m)')
-            if plane == "z":
-                ax.set_xlabel(f'x (m)')
-                ax.set_ylabel(f'y (m)')
-            ax.set_ylabel('Other axis (m)')  # Change accordingly
+            ax.set_title(f"Points sur le plan {axe}")
+            if axe == "x":
+                ax.set_xlabel(f'y (mm)')
+                ax.set_ylabel(f'z (mm)')
+            if axe == "y":
+                ax.set_xlabel(f'x (mm)')
+                ax.set_ylabel(f'z (mm)')
+            if axe == "z":
+                ax.set_xlabel(f'x (mm)')
+                ax.set_ylabel(f'y (mm)')
+            ax.set_ylabel('Other axis (mm)')  # Change accordingly
             self.figure_2d.colorbar(scatter, ax=ax, label='|H| (A/m)')
             self.canvas_2d.draw()
             return
@@ -720,37 +733,43 @@ class GraphicsTab(QWidget):
         gs = self.figure_2d.add_gridspec(1, 3, width_ratios=[6, 0.4, 6])
         ax1 = self.figure_2d.add_subplot(gs[0, 0])
         contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
-        ax1.set_title(f"Norme du champ |H| ({plane})")
-        if plane == "x":
-            ax1.set_xlabel(f'y (m)')
-            ax1.set_ylabel(f'z (m)')
-        if plane == "y":
-            ax1.set_xlabel(f'x (m)')
-            ax1.set_ylabel(f'z (m)')
-        if plane == "z":
-            ax1.set_xlabel(f'x (m)')
-            ax1.set_ylabel(f'y (m)')
+        ax1.set_title(f"Norme du champ |H| ({axe})")
+        if axe == "x":
+            ax1.set_xlabel(f'y (mm)')
+            ax1.set_ylabel(f'z (mm)')
+        if axe == "y":
+            ax1.set_xlabel(f'x (mm)')
+            ax1.set_ylabel(f'z (mm)')
+        if axe == "z":
+            ax1.set_xlabel(f'x (mm)')
+            ax1.set_ylabel(f'y (mm)')
         cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
         self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
         ax2 = self.figure_2d.add_subplot(gs[0, 2])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
                             scale=self.vector_scale_2d)
-        ax2.set_title(f"Direction du champ magnétique sur le plan {plane}")
-        if plane == "x":
-            ax2.set_xlabel(f'y (m)')
-            ax2.set_ylabel(f'z (m)')
-        if plane == "y":
-            ax2.set_xlabel(f'x (m)')
-            ax2.set_ylabel(f'z (m)')
-        if plane == "z":
-            ax2.set_xlabel(f'x (m)')
-            ax2.set_ylabel(f'y (m)')
+        ax2.set_title(f"Direction du champ magnétique sur le plan {axe}")
+        if axe == "x":
+            ax2.set_xlabel(f'y (mm)')
+            ax2.set_ylabel(f'z (mm)')
+        if axe == "y":
+            ax2.set_xlabel(f'x (mm)')
+            ax2.set_ylabel(f'z (mm)')
+        if axe == "z":
+            ax2.set_xlabel(f'x (mm)')
+            ax2.set_ylabel(f'y (mm)')
         ax2.set_aspect('equal')
         self.canvas_2d.draw()
 
     def update_tab_gaussian_and_radial(self):
         """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
         plane = self.plane_selector_3d.currentText()
+        if plane == "x,y":
+            axe = "z"
+        if plane == "x,z":
+            axe = "y"
+        if plane == "y,z":
+            axe = "x"
         if self.value_selector_3d.count() == 0:
             return
 
@@ -759,12 +778,12 @@ class GraphicsTab(QWidget):
         except ValueError:
             return
 
-        filtered_points = self.filter_points(plane, value)
+        filtered_points = self.filter_points(axe, value)
         if not filtered_points or len(filtered_points) < 3:
-            print(f"Aucun point trouvé pour le plan {plane}={value}, ou pas assez de points.")
+            print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
-        coord1, coord2, H_total, H_component1_norm, H_component2_norm = self.prepare_plot_data(filtered_points, plane)
+        coord1, coord2, H_total, H_component1_norm, H_component2_norm = self.prepare_plot_data(filtered_points, axe)
 
         # Check if there are enough unique points for interpolation
         if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
@@ -772,16 +791,16 @@ class GraphicsTab(QWidget):
             self.figure_gaussian.clear()
             ax1 = self.figure_gaussian.add_subplot(111, projection='3d')
             ax1.scatter(coord1, coord2, H_total, c=H_total, cmap='viridis', edgecolor='k', alpha=0.8)
-            ax1.set_title(f"Points sur le plan {plane}")
-            if plane == "x":
-                ax1.set_xlabel(f'y (m)')
-                ax1.set_ylabel(f'z (m)')
-            if plane == "y":
-                ax1.set_xlabel(f'x (m)')
-                ax1.set_ylabel(f'z (m)')
-            if plane == "z":
-                ax1.set_xlabel(f'x (m)')
-                ax1.set_ylabel(f'y (m)')
+            ax1.set_title(f"Points sur le plan {axe}")
+            if axe == "x":
+                ax1.set_xlabel(f'y (mm)')
+                ax1.set_ylabel(f'z (mm)')
+            if axe == "y":
+                ax1.set_xlabel(f'x (mm)')
+                ax1.set_ylabel(f'z (mm)')
+            if axe == "z":
+                ax1.set_xlabel(f'x (mm)')
+                ax1.set_ylabel(f'y (mm)')
             ax1.set_zlabel('Amplitude |H| (A/m)')
             self.canvas_gaussian.draw()
             return
@@ -799,31 +818,31 @@ class GraphicsTab(QWidget):
 
         ax1 = self.figure_gaussian.add_subplot(gs[0, 0], projection='3d')
         surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
-        ax1.set_title(f'Amplitude du champ magnétique |H| ({plane})')
-        if plane == "x":
-            ax1.set_xlabel(f'y (m)')
-            ax1.set_ylabel(f'z (m)')
-        if plane == "y":
-            ax1.set_xlabel(f'x (m)')
-            ax1.set_ylabel(f'z (m)')
-        if plane == "z":
-            ax1.set_xlabel(f'x (m)')
-            ax1.set_ylabel(f'y (m)')
+        ax1.set_title(f'Amplitude du champ magnétique |H| ({axe})')
+        if axe == "x":
+            ax1.set_xlabel(f'y (mm)')
+            ax1.set_ylabel(f'z (mm)')
+        if axe == "y":
+            ax1.set_xlabel(f'x (mm)')
+            ax1.set_ylabel(f'z (mm)')
+        if axe == "z":
+            ax1.set_xlabel(f'x (mm)')
+            ax1.set_ylabel(f'y (mm)')
         ax1.set_zlabel('Amplitude |H| (A/m)')
         self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
 
         ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=self.vector_scale_2d)
-        ax2.set_title(f"Champ vectoriel sur le plan {plane}")
-        if plane == "x":
-            ax2.set_xlabel(f'y (m)')
-            ax2.set_ylabel(f'z (m)')
-        if plane == "y":
-            ax2.set_xlabel(f'x (m)')
-            ax2.set_ylabel(f'z (m)')
-        if plane == "z":
-            ax2.set_xlabel(f'x (m)')
-            ax2.set_ylabel(f'y (m)')
+        ax2.set_title(f"Champ vectoriel sur le plan {axe}")
+        if axe == "x":
+            ax2.set_xlabel(f'y (mm)')
+            ax2.set_ylabel(f'z (mm)')
+        if axe == "y":
+            ax2.set_xlabel(f'x (mm)')
+            ax2.set_ylabel(f'z (mm)')
+        if axe == "z":
+            ax2.set_xlabel(f'x (mm)')
+            ax2.set_ylabel(f'y (mm)')
         ax2.set_aspect('equal')
 
         self.canvas_gaussian.draw()

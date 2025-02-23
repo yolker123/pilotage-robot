@@ -78,7 +78,7 @@ class Tektronix:
         """
         Définit les paramètres d'acquisition selon la configuration fournie.
         """
-        self.scope.commands.acquire.state.write("OFF")
+        # self.scope.commands.acquire.state.write("OFF")
         self.scope.commands.acquire.mode.write("Sample")
         # Dictionnaires pour stocker les mesures par canal
         channel_map = {
@@ -181,7 +181,7 @@ class Tektronix:
                     self.captureWF_tektronix(kt, f"{x},{y},{z}")
 
                 if it.get("img"):
-                    self.scope.commands.acquire.state.write("OFF")
+                    # self.scope.commands.acquire.state.write("OFF")
                     print("image activé pour le canal", kt)
                     screenshots_directory = "C:/Users/Public/Tektronix/TekScope/Screenshots/"
                     screenshots_directory_measures = screenshots_directory + f"logScreenshot_tektronix_{self.current_time_str}/"
