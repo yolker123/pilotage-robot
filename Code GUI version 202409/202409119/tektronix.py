@@ -19,7 +19,7 @@ import time
 from bddSetupOscilloscope import *
 
 # Configuration initiale
-OSCILLOSCOPE_IP = "172.16.115.218"
+OSCILLOSCOPE_IP = "172.16.121.115"
 visa_address = f"TCPIP::{OSCILLOSCOPE_IP}::INSTR"
 
 pwd = os.getcwd() # Répertoire de travail actuel
@@ -28,7 +28,7 @@ pwd = os.getcwd() # Répertoire de travail actuel
 global wf_img_config # Configuration globale pour les captures
 
 class Tektronix:
-    def __init__(self):
+    def __init__(self, main_window):
         """
         Initialise les variables nécessaires pour interagir avec l'oscilloscope Tektronix.
         """
@@ -39,6 +39,7 @@ class Tektronix:
         self.id_map = []
         self.filename = ""
         self.current_time_str = None
+        self.main_window = main_window
 
     def init_connection(self):
         """
@@ -56,8 +57,10 @@ class Tektronix:
                 scope: MSO6B = device_manager.add_scope(OSCILLOSCOPE_IP)
                 print("Connected to:", scope.idn_string)
                 self.scope = scope
-
+                self.main_window.validationText.append("Connected to the oscilloscope")
             except Exception as e:
+                self.main_window.validationText.append("Connection attempt failed, retrying...")
+                self.main_window.fail_box("Connection attempt failed, retrying...")
                 print("Connection attempt failed. Retrying...")
                 print(f"Erreur lors de la connexion à l'oscilloscope : {e}")
 
@@ -125,6 +128,8 @@ class Tektronix:
         # Met à jour le nombre total de mesures configurées
         self.measurement_number = len(self.id_map)
 
+        self.main_window.validationText.append(f"Configuration complétée : {self.channel_measurements}")
+        self.main_window.validationText.append(f"Nombre total de mesures : {self.measurement_number}")
         print("Configuration complétée :", self.channel_measurements)
         print(f"Nombre total de mesures : {self.measurement_number}")
 
@@ -132,6 +137,8 @@ class Tektronix:
         headers = ["Timestamp","X","Y","Z"]  # Les en-têtes fixes
         headers += [f"{ch}_{mt}" for ch, mt in self.id_map]
         self.header_line = ",".join(headers) + "\n"
+
+        self.main_window.validationText.append("Oscilloscope Configured")
 
 
     def get_measures(self, x, y, z):

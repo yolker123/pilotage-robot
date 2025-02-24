@@ -295,17 +295,13 @@ class MainWindow(QMainWindow):
         grid_btnAxes2.addWidget(self.buttonRobot5Axes, 1, 0)  # add widgets to ths gridlayout
         grid_btnAxes2.addWidget(self.buttonRobot6Axes, 1, 1)
 
-        self.toastConnected = QPushButton("Connected")
-        self.toastConnected.clicked.connect(self.toast1)
-
-        self.toastSetup = QPushButton("SetupDone")
-        self.toastSetup.clicked.connect(self.toast2)
-        grid_btnAxes2.addWidget(self.toastConnected, 2, 0)  # add widgets to ths gridlayout
-        grid_btnAxes2.addWidget(self.toastSetup, 2, 1)
-
-        self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(QIcon("icon.png"))  # Remplace "icon.png" par une icône valide
-        self.tray_icon.show()  # Obligatoire pour que les notifications fonctionnent
+        # self.toastConnected = QPushButton("Connected")
+        # self.toastConnected.clicked.connect(self.fail_box("Test"))
+        #
+        # self.toastSetup = QPushButton("SetupDone")
+        # self.toastSetup.clicked.connect(self.toast2)
+        # grid_btnAxes2.addWidget(self.toastConnected, 2, 0)  # add widgets to ths gridlayout
+        # grid_btnAxes2.addWidget(self.toastSetup, 2, 1)
 
         btn_widgetAxes2.setLayout(
             grid_btnAxes2)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
@@ -558,9 +554,9 @@ class MainWindow(QMainWindow):
 
         grid = QVBoxLayout()  # creat a QVBoxLayout--> organizes your widgets vertically in this window.no need use QGridLayout()
         global validationText
-        validationText = QTextEdit()  # creat textbox
-        validationText.setEnabled(False)  # False --> cant be edit, just display
-        grid.addWidget(validationText)  # add validationText (test box) to the VBoxlayout named grid
+        self.validationText = QTextEdit()  # creat textbox
+        self.validationText.setEnabled(False)  # False --> cant be edit, just display
+        grid.addWidget(self.validationText)  # add validationText (test box) to the VBoxlayout named grid
         validTextBox_widget.setLayout(grid)
 
         # ------------------------Emergency STOP Button----------------------
@@ -622,7 +618,7 @@ class MainWindow(QMainWindow):
 
     def initOscilloscope(self):
         if self.oscilloName == "tektronix":
-            self.tektronix = Tektronix()
+            self.tektronix = Tektronix(self)
             self.tektronix.init_connection()
             self.buttonConnectOscilloscope.setEnabled(False)
             self.buttonSetupOscilloscope.setEnabled(True)
@@ -630,8 +626,8 @@ class MainWindow(QMainWindow):
             rm = oscilloscopeConnection(
                 idOscilloscope)  # oscilloscopeConnection is a function in oscilloscopeAcquisition
             # display the action on the specific Text Boxt
-            validationText.setText(
-                "Oscilloscope Connection: " + str(rm.list_resources()))  # settext is to write text in validationText
+            self.validationText.append(
+                "Oscilloscope Connection to: " + str(rm.list_resources()))  # settext is to write text in validationText
 
             # variable set to true in order to enable the setupOscilloscope fonction
             self.buttonSetupOscilloscope.setEnabled(True)
@@ -646,9 +642,9 @@ class MainWindow(QMainWindow):
             current_time = datetime.datetime.now()
             log_dir = f"logAcquisition/measure_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
             getAcquisition(self.mfa, "(0 0 0)", 0, log_dir)
-            validationText.setText("Autosetup Done")
+            self.validationText.append("Autosetup Done")
         if self.oscilloName == "tektronix":
-            tektronix_get_measures(self.scope, self.measurementNumber)
+            tektronix.tektronix_get_measures(self.scope, self.measurementNumber)
 
     """
      * @brief Initialize the Robot position 
@@ -688,7 +684,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on NFC Fonction")
+            self.validationText.append("Click on NFC Fonction")
 
         self.executeFunction.emit(gui1)  # call gui1 function in main window thread
 
@@ -722,7 +718,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on EMVCO Fonction")
+            self.validationText.append("Click on EMVCO Fonction")
 
         self.executeFunction.emit(gui1)  # call gui1 function in main window thread
 
@@ -766,7 +762,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on customCube Fonction")
+            self.validationText.append("Click on customCube Fonction")
 
             _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
             x = float(_x)
@@ -824,7 +820,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on customCylindre Function")
+            self.validationText.append("Click on customCylindre Function")
 
             _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
             x = float(_x)
@@ -867,7 +863,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on customSemisphere Function")
+            self.validationText.append("Click on customSemisphere Function")
 
             _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
             x = float(_x)
@@ -908,7 +904,7 @@ class MainWindow(QMainWindow):
             err = self.robot.Energize(1)
 
         def gui():
-            validationText.setText("Point done")
+            self.validationText.append("Point done")
 
         self.executeFunction.emit(gui)
 
@@ -919,7 +915,7 @@ class MainWindow(QMainWindow):
     def disconnect(self):
         self.robot.CloseComm()
         self.canMove = False
-        validationText.setText("Robot Disconnection Done")
+        self.validationText.append("Robot Disconnection Done")
         self.buttonDisconnectRobot.setEnabled(False)
         self.buttonConnectRobot.setEnabled(True)
         if self.robot.type == "DENSO":
@@ -937,16 +933,16 @@ class MainWindow(QMainWindow):
     def validateCoordPt(self):
         if not self.x.text() or not self.y.text() or not self.z.text():  # The result of the .text() method is a string containing the combined text of all matched elements.
             # self.x is Qlineedit class, self.x.text() is its value in string if it is not empty. if it's empty, return false. If certen value, return is True.
-            validationText.setText("At least one of the coordinates is empty")
+            self.validationText.append("At least one of the coordinates is empty")
         else:
             if is_float(self.x.text()) and is_float(self.y.text()) and is_float(
                     self.z.text()):  # The isnumeric() method checks if all the characters in the string are numeric.
                 self.x_ptr = float(self.x.text())  # convert the string value of self.x.text() to int
                 self.y_ptr = float(self.y.text())
                 self.z_ptr = float(self.z.text())
-                validationText.setText("Coordinates Validate")
+                self.validationText.append("Coordinates Validate")
             else:
-                validationText.setText("x, y or z is not a nomber")
+                self.validationText.append("x, y or z is not a nomber")
 
     """
      * @brief Notify a change on the speed slider
@@ -957,7 +953,7 @@ class MainWindow(QMainWindow):
         slider = self.sender()  # self.sender() in a function connected to your button event to get the object that triggered the event.
 
         speed = slider.value()
-        validationText.setText("speed : " + str(speed))  # validationText is defined in line 206
+        self.validationText.append("speed : " + str(speed))  # validationText is defined in line 206
         print("speed : ", speed)  # To show the value in console
 
     """
@@ -981,7 +977,7 @@ class MainWindow(QMainWindow):
     def EmergencyStop(self):
         emergencyStop[0] = True
         self.robot.Energize(0)
-        validationText.setText("Robot Stopped")
+        self.validationText.append("Robot Stopped")
 
     def figureLaunch(self):
         self.getFigureList()[1][self.figureSelector.currentIndex()]()
@@ -1285,7 +1281,7 @@ class MainWindow(QMainWindow):
         txtCoords = "coords : (x: {}, y: {}, z: {})".format(x, y, z)
 
         def gui():
-            validationText.setText(txtCoords)
+            self.validationText.append(txtCoords)
 
         self.executeFunction.emit(gui)
 
@@ -1298,7 +1294,7 @@ class MainWindow(QMainWindow):
     def fixPoint(self):
         x, y, z, dump = self.robot.GetPosition().split(", ", 3)
         txtCoords = "point fixed : (x: {}, y: {}, z: {})".format(x, y, z)
-        validationText.setText(txtCoords)
+        self.validationText.append(txtCoords)
         print(txtCoords)
         self.fixed_x = float(x)
         self.fixed_y = float(y)
@@ -1367,6 +1363,7 @@ class MainWindow(QMainWindow):
             print(f"CONF : {config}")
             if self.oscilloName == "lecroy":
                 setOscilloscopeParameters(config)
+                self.validationText.append("Oscilloscope Configured")
             if self.oscilloName == "tektronix":
                 self.tektronix.set_parameters(config)
 
@@ -1414,44 +1411,10 @@ class MainWindow(QMainWindow):
         self.label_theta_points.setText("Circle points :")
         self.label_z_points.setText("Layers :")
 
-    # def toast1(self):
-    #     success = self.check_connection()
-    #     if success:
-    #         QMessageBox.information(self, "Status", "Connected Successfully!")
-    #     else:
-    #         QMessageBox.critical(self, "Status", "Connection Failed!")
-    #
-    # def toast2(self):
-    #     success = self.check_setup()
-    #     if success:
-    #         QMessageBox.information(self, "Status", "Setup Completed Successfully!")
-    #     else:
-    #         QMessageBox.critical(self, "Status", "Setup Failed!")
-    def show_notification(self, title, message):
-        """ Affiche une notification en bas à droite qui disparaît après 5 secondes """
-        self.tray_icon.showMessage(title, message, QSystemTrayIcon.Information, 5000)
 
-    def toast1(self):
-        success = self.check_connection()
-        if success:
-            self.show_notification("Status", "Connected Successfully!")
-        else:
-            self.show_notification("Status", "Connection Failed!")
+    def fail_box(self, message):
+        QMessageBox.critical(self, "Status", message)
 
-    def toast2(self):
-        success = self.check_setup()
-        if success:
-            self.show_notification("Status", "Setup Completed Successfully!")
-        else:
-            self.show_notification("Status", "Setup Failed!")
-
-    def check_connection(self):
-        # Simuler un test de connexion (True = succès, False = échec)
-        return True  # Remplacez par la logique réelle
-
-    def check_setup(self):
-        # Simuler un test de setup (True = succès, False = échec)
-        return False  # Remplacez par la logique réelle
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)  #
