@@ -1151,7 +1151,7 @@ class GraphicsTab(QWidget):
         label_text = self._create_label_text(plane, hcb1, hcb2, config['ht'], index)
 
         annotation = config['annotation']
-        annotation.xy = tip
+        annotation.xy = A
         annotation.set_text(label_text)
         annotation.get_bbox_patch().set_facecolor("yellow")
         annotation.set_alpha(0.8)
