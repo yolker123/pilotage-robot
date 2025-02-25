@@ -53,7 +53,6 @@ def process_old_format_file(filepath: str) -> Tuple[Tuple[float, float, float], 
 
     return coordinates, channel_data
 
-
 def process_directory(input_dir: str) -> List[Tuple[Tuple[float, float, float], Dict[str, str]]]:
     """Traite tous les fichiers d'un répertoire."""
     all_data = []
@@ -63,7 +62,6 @@ def process_directory(input_dir: str) -> List[Tuple[Tuple[float, float, float], 
             measurement_data = process_old_format_file(filepath)
             all_data.append(measurement_data)
     return all_data
-
 
 def write_new_format(output_file: str, data: List[Tuple[Tuple[float, float, float], Dict[str, str]]]):
     """Écrit les données dans le nouveau format CSV."""
@@ -89,6 +87,6 @@ def write_new_format(output_file: str, data: List[Tuple[Tuple[float, float, floa
         # Écriture des données
         for coordinates, channel_data in data:
             line_data = list(coordinates)
-            for channel in header[3:]:  # Skip x, y, z
-                line_data.append(str(channel_data.get(channel, '')))
+            for _, value in channel_data.items():
+                line_data.append(str(value))
             f.write(', '.join(map(str, line_data)) + '\n')

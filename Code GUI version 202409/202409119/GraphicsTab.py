@@ -997,7 +997,6 @@ class GraphicsTab(QWidget):
                     self.annotation.set_visible(False)
                     self.canvas_2d.draw_idle()
         if event.inaxes == self.ax_gaussian and hasattr(self, "gaussian_vector_bases"):
-            print("in")
             P = np.array([event.xdata, event.ydata])
             tol = 0.8  # tolerance; adjust if needed
             best_index = None
