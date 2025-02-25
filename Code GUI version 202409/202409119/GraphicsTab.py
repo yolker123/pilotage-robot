@@ -708,7 +708,7 @@ class GraphicsTab(QWidget):
             print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
-        coord1, coord2, H_total, H_component1_norm, H_component2_norm = self.prepare_plot_data(filtered_points, axe)
+        coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(filtered_points, axe)
 
         # If there are not enough points to interpolate smoothly, do a scatter plot
         if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
@@ -717,7 +717,7 @@ class GraphicsTab(QWidget):
             ax = self.figure_2d.add_subplot(111)
             scatter = ax.scatter(coord1, coord2, c=H_total, cmap='viridis', edgecolor='k')
             ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=self.vector_scale_2d)
-            ax.set_title(f"Points sur le plan {axe}")
+            ax.set_title(f"Points on plane {axe}")
             if axe == "x":
                 ax.set_xlabel(f'Y (mm)')
                 ax.set_ylabel(f'Z (mm)')
@@ -734,11 +734,16 @@ class GraphicsTab(QWidget):
 
         # Proceed as usual if data is sufficient
         coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
-        H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
+        H_total_grid = griddata((coord1, coord2), H_total,
+                                (coord1_grid, coord2_grid), method="linear", fill_value=0)
+        H_component1_base_grid = griddata((coord1, coord2), H_component1_base,
+                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
+        H_component2_base_grid = griddata((coord1, coord2), H_component2_base,
+                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
+        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm,
+                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
+        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm,
+                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
 
         self.figure_2d.clear()
         gs = self.figure_2d.add_gridspec(1, 3, width_ratios=[6, 0.4, 6])
@@ -755,11 +760,13 @@ class GraphicsTab(QWidget):
             ax1.set_xlabel(f'X (mm)')
             ax1.set_ylabel(f'Y (mm)')
         cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
-        self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
-        ax2 = self.figure_2d.add_subplot(gs[0, 2])
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, color='red',
-                            scale=self.vector_scale_2d)
-        ax2.set_title(f"Direction du champ magnétique sur le plan {axe}")
+        self.figure_2d.colorbar(contour, cax=cbar_ax, label="|H| (A/m)")
+        self.ax2 = self.figure_2d.add_subplot(gs[0, 2])
+
+        # Draw only the quiver with vectors and no points.
+        self.ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid,
+                          color="red", scale=self.vector_scale_2d)
+        self.ax2.set_title(f"Magnetic Field Direction on plane {axe}")
         if axe == "x":
             ax2.set_xlabel(f'Y (mm)')
             ax2.set_ylabel(f'Z (mm)')
@@ -769,7 +776,29 @@ class GraphicsTab(QWidget):
         if axe == "z":
             ax2.set_xlabel(f'X (mm)')
             ax2.set_ylabel(f'Y (mm)')
-        ax2.set_aspect('equal')
+
+        self.ax2.set_aspect("equal")
+
+        # Store vector base positions and components for interactivity.
+
+        self.vector_bases = np.array([coord1_grid.flatten(), coord2_grid.flatten()]).T
+        self.vector_hcb1 = H_component1_base_grid.flatten()
+        self.vector_hcb2 = H_component2_base_grid.flatten()
+        self.vector_hcn1 = H_component1_norm_grid.flatten()
+        self.vector_hcn2 = H_component2_norm_grid.flatten()
+        self.vector_ht = H_total_grid.flatten()
+
+        # Create the annotation once.
+        self.annotation = self.ax2.annotate(
+            text="",
+            xy=(0, 0),
+            xytext=(6, 15),
+            textcoords="offset points",
+            bbox={"boxstyle": "round", "fc": "w"},
+            arrowprops={"arrowstyle": "->"}
+        )
+        self.annotation.set_visible(False)
+        self.canvas_2d.mpl_connect("motion_notify_event", self.motion_hover)
         self.canvas_2d.draw()
 
     def update_tab_gaussian_and_radial(self):
@@ -794,7 +823,7 @@ class GraphicsTab(QWidget):
             print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
-        coord1, coord2, H_total, H_component1_norm, H_component2_norm = self.prepare_plot_data(filtered_points, axe)
+        coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(filtered_points, axe)
 
         # Check if there are enough unique points for interpolation
         if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
@@ -875,12 +904,74 @@ class GraphicsTab(QWidget):
             np.array([p['Hy'] for p in filtered_points]) ** 2 +
             np.array([p['Hz'] for p in filtered_points]) ** 2
         )
-        H_component1 = np.array([p[f'H{axis1}'] for p in filtered_points])
-        H_component2 = np.array([p[f'H{axis2}'] for p in filtered_points])
+        H_component1_base = np.array([p[f'H{axis1}'] for p in filtered_points])
+        H_component2_base = np.array([p[f'H{axis2}'] for p in filtered_points])
+
 
         if self.normalize_button_2D.isChecked():
             with np.errstate(divide='ignore', invalid='ignore'):
-                H_component1 = np.where(H_total != 0, H_component1 / H_total, 0)
-                H_component2 = np.where(H_total != 0, H_component2 / H_total, 0)
+                H_component1 = np.where(H_total != 0, H_component1_base / H_total, 0)
+                H_component2 = np.where(H_total != 0, H_component2_base / H_total, 0)
+        else:
+            H_component1 = H_component1_base
+            H_component2 = H_component2_base
 
-        return coord1, coord2, H_total, H_component1, H_component2
+        return coord1, coord2, H_total, H_component1, H_component2, H_component1_base, H_component2_base
+
+    def motion_hover(self, event):
+        if event.inaxes == self.ax2 and hasattr(self, "vector_bases"):
+            P = np.array([event.xdata, event.ydata])
+            tol = 0.8  # tolerance; adjust if needed
+            best_index = None
+            best_distance = tol
+            # Loop over all vectors
+            for i, base in enumerate(self.vector_bases):
+                A = np.array(base)
+                hcn1 = self.vector_hcn1[i]
+                hcn2 = self.vector_hcn2[i]
+                B = A + np.array([hcn1, hcn2])
+                AB = B - A
+                AP = P - A
+                if np.dot(AB, AB) == 0:
+                    distance = np.linalg.norm(AP)
+                else:
+                    t = np.dot(AP, AB) / np.dot(AB, AB)
+                    if t < 0:
+                        closest = A
+                    elif t > 1:
+                        closest = B
+                    else:
+                        closest = A + t * AB
+                    distance = np.linalg.norm(P - closest)
+                if distance < best_distance:
+                    best_distance = distance
+                    best_index = i
+            if best_index is not None:
+                A = np.array(self.vector_bases[best_index])
+                hcb1 = self.vector_hcb1[best_index]
+                hcb2 = self.vector_hcb2[best_index]
+                hcn1 = self.vector_hcn1[best_index]
+                hcn2 = self.vector_hcn2[best_index]
+                # Position annotation at the arrow tip
+                tip = A + np.array([hcn1, hcn2])
+
+                plane = self.plane_selector_2d.currentText()
+                axes = plane.split(",")
+                # If vector_h exists, use it in the label; otherwise omit it
+                if hasattr(self, "vector_ht"):
+                    h = self.vector_ht[best_index]
+                    label_text = f"H{axes[0]}={hcb1:.2f}\nH{axes[1]}={hcb2:.2f}\n|H|={h:.2f}"
+                else:
+                    label_text = f"H{axes[0]}={hcb1:.2f}\nH{axes[1]}={hcb2:.2f}"
+                self.annotation.xy = tip
+                self.annotation.set_text(label_text)
+                self.annotation.get_bbox_patch().set_facecolor("yellow")
+                self.annotation.set_alpha(0.8)
+                self.annotation.set_visible(True)
+                self.canvas_2d.draw_idle()
+            else:
+                if self.annotation.get_visible():
+                    self.annotation.set_visible(False)
+                    self.canvas_2d.draw_idle()
+
+
