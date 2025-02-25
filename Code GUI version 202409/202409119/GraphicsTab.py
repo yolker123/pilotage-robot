@@ -568,20 +568,44 @@ class GraphicsTab(QWidget):
         # Add to the main layout
         layout.addLayout(form_layout)
 
+        # Label for algorithm explanation
+        explanation_label = QLabel("")
+        explanation_label.setWordWrap(True)
+        layout.addWidget(explanation_label)
+
         # Button to close the dialog
         ok_button = QPushButton("OK")
         ok_button.setEnabled(False)  # Initially disable the button
         layout.addWidget(ok_button)
 
         # Enable the OK button only when a radio button is selected
-        def enable_ok_button():
-            if linear_button.isChecked() or nonlinear_button.isChecked():
+        # Function to update the explanation box with synthesized texts
+        def update_explanation():
+            if linear_button.isChecked():
+                # Synthesized explanation for trilinear interpolation (linear)
+                explanation_text = (
+                    "Trilinear interpolation computes intermediate values by using the weighted average "
+                    "of 8 adjacent points within a cube, assuming linear changes along each axis. "
+                    "It efficiently increases grid resolution with simple linear approximations."
+                )
+                ok_button.setEnabled(True)
+            elif nonlinear_button.isChecked():
+                # Synthesized explanation for non-linear interpolation
+                explanation_text = (
+                    "Non-linear interpolation incorporates complex physical laws and corrections to capture "
+                    "rapid variations in the field, resulting in a more precise estimation. "
+                )
                 ok_button.setEnabled(True)
             else:
+                explanation_text = ""
                 ok_button.setEnabled(False)
+            explanation_label.setText(explanation_text)
+            explanation_label.adjustSize()
+            dialog.adjustSize()
 
-        linear_button.toggled.connect(enable_ok_button)
-        nonlinear_button.toggled.connect(enable_ok_button)
+        # Connect toggled signals to update the explanation
+        linear_button.toggled.connect(update_explanation)
+        nonlinear_button.toggled.connect(update_explanation)
 
         def on_ok_clicked():
             algorithm = "non-linear" if nonlinear_button.isChecked() else "linear"
