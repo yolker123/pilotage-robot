@@ -852,6 +852,10 @@ class GraphicsTab(QWidget):
                                           method='linear', fill_value=0)
         H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid),
                                           method='linear', fill_value=0)
+        H_component1_base_grid = griddata((coord1, coord2), H_component1_base, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
+        H_component2_base_grid = griddata((coord1, coord2), H_component2_base, (coord1_grid, coord2_grid),
+                                          method='linear', fill_value=0)
 
         self.figure_gaussian.clear()
         gs = self.figure_gaussian.add_gridspec(1, 2, width_ratios=[1, 1])
@@ -871,19 +875,39 @@ class GraphicsTab(QWidget):
         ax1.set_zlabel('Amplitude |H| (A/m)')
         self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
 
-        ax2 = self.figure_gaussian.add_subplot(gs[0, 1])
-        quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=self.vector_scale_2d)
-        ax2.set_title(f"Champ vectoriel sur le plan {axe}")
+        self.ax_gaussian = self.figure_gaussian.add_subplot(gs[0, 1])
+        self.ax_gaussian.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=self.vector_scale_2d)
+        self.ax_gaussian.set_title(f"Champ vectoriel sur le plan {axe}")
         if axe == "x":
-            ax2.set_xlabel(f'Y (mm)')
-            ax2.set_ylabel(f'Z (mm)')
+            self.ax_gaussian.set_xlabel(f'Y (mm)')
+            self.ax_gaussian.set_ylabel(f'Z (mm)')
         if axe == "y":
-            ax2.set_xlabel(f'X (mm)')
-            ax2.set_ylabel(f'Z (mm)')
+            self.ax_gaussian.set_xlabel(f'X (mm)')
+            self.ax_gaussian.set_ylabel(f'Z (mm)')
         if axe == "z":
-            ax2.set_xlabel(f'X (mm)')
-            ax2.set_ylabel(f'Y (mm)')
-        ax2.set_aspect('equal')
+            self.ax_gaussian.set_xlabel(f'X (mm)')
+            self.ax_gaussian.set_ylabel(f'Y (mm)')
+        self.ax_gaussian.set_aspect('equal')
+        # Store vector base positions and components for interactivity.
+
+        self.gaussian_vector_bases = np.array([coord1_grid.flatten(), coord2_grid.flatten()]).T
+        self.gaussian_vector_hcb1 = H_component1_base_grid.flatten()
+        self.gaussian_vector_hcb2 = H_component2_base_grid.flatten()
+        self.gaussian_vector_hcn1 = H_component1_norm_grid.flatten()
+        self.gaussian_vector_hcn2 = H_component2_norm_grid.flatten()
+        self.gaussian_vector_ht = H_total_grid.flatten()
+
+        # Create the annotation once.
+        self.gaussian_annotation = self.ax_gaussian.annotate(
+            text="",
+            xy=(0, 0),
+            xytext=(6, 15),
+            textcoords="offset points",
+            bbox={"boxstyle": "round", "fc": "w"},
+            arrowprops={"arrowstyle": "->"}
+        )
+        self.gaussian_annotation.set_visible(False)
+        self.canvas_gaussian.mpl_connect("motion_notify_event", self.motion_hover)
 
         self.canvas_gaussian.draw()
 
@@ -972,5 +996,60 @@ class GraphicsTab(QWidget):
                 if self.annotation.get_visible():
                     self.annotation.set_visible(False)
                     self.canvas_2d.draw_idle()
+        if event.inaxes == self.ax_gaussian and hasattr(self, "gaussian_vector_bases"):
+            print("in")
+            P = np.array([event.xdata, event.ydata])
+            tol = 0.8  # tolerance; adjust if needed
+            best_index = None
+            best_distance = tol
+            # Loop over all vectors
+            for i, base in enumerate(self.gaussian_vector_bases):
+                A = np.array(base)
+                hcn1 = self.gaussian_vector_hcn1[i]
+                hcn2 = self.gaussian_vector_hcn2[i]
+                B = A + np.array([hcn1, hcn2])
+                AB = B - A
+                AP = P - A
+                if np.dot(AB, AB) == 0:
+                    distance = np.linalg.norm(AP)
+                else:
+                    t = np.dot(AP, AB) / np.dot(AB, AB)
+                    if t < 0:
+                        closest = A
+                    elif t > 1:
+                        closest = B
+                    else:
+                        closest = A + t * AB
+                    distance = np.linalg.norm(P - closest)
+                if distance < best_distance:
+                    best_distance = distance
+                    best_index = i
+            if best_index is not None:
+                A = np.array(self.gaussian_vector_bases[best_index])
+                hcb1 = self.gaussian_vector_hcb1[best_index]
+                hcb2 = self.gaussian_vector_hcb2[best_index]
+                hcn1 = self.gaussian_vector_hcn1[best_index]
+                hcn2 = self.gaussian_vector_hcn2[best_index]
+                # Position annotation at the arrow tip
+                tip = A + np.array([hcn1, hcn2])
+
+                plane = self.plane_selector_3d.currentText()
+                # If vector_h exists, use it in the label; otherwise omit it
+                if hasattr(self, "gaussian_vector_ht"):
+                    h = self.vector_ht[best_index]
+                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}\n|H|={h:.2f}"
+                else:
+                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}"
+                self.gaussian_annotation.xy = tip
+                self.gaussian_annotation.set_text(label_text)
+                self.gaussian_annotation.get_bbox_patch().set_facecolor("yellow")
+                self.gaussian_annotation.set_alpha(0.8)
+                self.gaussian_annotation.set_visible(True)
+                self.canvas_gaussian.draw_idle()
+            else:
+                if self.gaussian_annotation.get_visible():
+                    self.gaussian_annotation.set_visible(False)
+                    self.canvas_gaussian.draw_idle()
+
 
 
