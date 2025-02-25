@@ -825,6 +825,11 @@ class GraphicsTab(QWidget):
             self.ax2.set_ylabel(f'Y (mm)')
 
         self.ax2.set_aspect("equal")
+        pos = self.ax2.get_position()
+        # Décaler ax2 vers la droite permet d'augmenter visuellement l'espace entre la légende et ce graphique,
+        # tout en gardant un écart réduit entre le premier graphique et la légende.
+        new_pos = [pos.x0 + 0.05, pos.y0, pos.width, pos.height]  # Valeur ajustable selon le besoin
+        self.ax2.set_position(new_pos)
 
         # Store vector base positions and components for interactivity.
 
