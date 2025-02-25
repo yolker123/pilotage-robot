@@ -821,8 +821,10 @@ class GraphicsTab(QWidget):
             arrowprops={"arrowstyle": "->"}
         )
         self.annotation.set_visible(False)
-        self.canvas_2d.mpl_connect("motion_notify_event", self.motion_hover)
-        self.canvas_2d.draw()
+
+        # Initialize interactivity for ax2
+        self.init_interactivity(self.ax2, self.canvas_2d)
+
 
     def update_tab_gaussian_and_radial(self):
         """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
@@ -930,9 +932,93 @@ class GraphicsTab(QWidget):
             arrowprops={"arrowstyle": "->"}
         )
         self.gaussian_annotation.set_visible(False)
-        self.canvas_gaussian.mpl_connect("motion_notify_event", self.motion_hover)
+        # Initialize interactivity for ax_gaussian
+        self.init_interactivity(self.ax_gaussian, self.canvas_gaussian)
 
-        self.canvas_gaussian.draw()
+    def init_interactivity(self, ax, canvas):
+        """Initialize interactivity for a given axis and canvas."""
+        ax.set_autoscale_on(True)
+        self.dragging = False
+        self.previous_point = None
+
+        canvas.mpl_connect("motion_notify_event", self.motion_hover)
+        canvas.mpl_connect('scroll_event', self.on_scroll)
+        canvas.mpl_connect('button_press_event', self.on_press)
+        canvas.mpl_connect('button_release_event', self.on_release)
+        canvas.mpl_connect('motion_notify_event', self.on_motion)
+
+        canvas.draw()
+
+    def on_scroll(self, event):
+        """Handle scroll events for zooming."""
+        if event.inaxes is None:
+            return
+
+        ax = event.inaxes
+        canvas = ax.figure.canvas
+
+        # Get the current x and y limits
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+
+        # Get the current mouse position
+        x, y = event.xdata, event.ydata
+
+        # Zoom factor
+        scale_factor = 1.1 if event.button == 'up' else 0.9
+
+        # Set new limits
+        new_width = (xlim[1] - xlim[0]) * scale_factor
+        new_height = (ylim[1] - ylim[0]) * scale_factor
+
+        ax.set_xlim([x - new_width * (x - xlim[0]) / (xlim[1] - xlim[0]),
+                     x + new_width * (xlim[1] - x) / (xlim[1] - xlim[0])])
+        ax.set_ylim([y - new_height * (y - ylim[0]) / (ylim[1] - ylim[0]),
+                     y + new_height * (ylim[1] - y) / (ylim[1] - ylim[0])])
+
+        canvas.draw_idle()
+
+    def on_press(self, event):
+        """Handle mouse button press for panning."""
+        if event.inaxes is None:
+            return
+
+        if event.button == 1:  # Left mouse button
+            self.dragging = True
+            self.previous_point = (event.xdata, event.ydata)
+
+    def on_release(self, event):
+        """Handle mouse button release."""
+        self.dragging = False
+        self.previous_point = None
+
+    def on_motion(self, event):
+        """Handle mouse motion for panning and hover annotations."""
+        ax = event.inaxes
+        if ax is None:
+            return
+
+        canvas = ax.figure.canvas
+
+        # First check if we're doing a panning operation
+        if self.dragging and event.xdata and event.ydata:
+            # Calculate the movement
+            dx = self.previous_point[0] - event.xdata
+            dy = self.previous_point[1] - event.ydata
+
+            # Update the view limits
+            ax.set_xlim(ax.get_xlim() + dx)
+            ax.set_ylim(ax.get_ylim() + dy)
+
+            # Update the previous point
+            self.previous_point = (event.xdata, event.ydata)
+
+            # Redraw the canvas
+            canvas.draw_idle()
+        # If not panning, handle hover functionality
+        elif not self.dragging:
+            # Your existing hover functionality
+            self.motion_hover(event)
 
     def filter_points(self, plane, value, epsilon=1e-5):
         """Filtre les points selon le plan et la valeur donnée."""
@@ -966,7 +1052,8 @@ class GraphicsTab(QWidget):
         return coord1, coord2, H_total, H_component1, H_component2, H_component1_base, H_component2_base
 
     def motion_hover(self, event):
-        """Handle mouse hover events for vector annotations."""
+        if self.dragging:
+            return
         if event.inaxes == self.ax2 and hasattr(self, "vector_bases"):
             self._handle_hover(event, "2d")
         elif event.inaxes == self.ax_gaussian and hasattr(self, "gaussian_vector_bases"):
