@@ -134,6 +134,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Pilotage Robot")
+        self.showMaximized()
         self.tektronix = Tektronix(self)
         self.measurementNumber = None
         self.scope = None
