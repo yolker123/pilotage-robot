@@ -79,8 +79,31 @@ class GraphicsTab(QWidget):
             print(f"Valeur extraite : {hRobot}")  # Affiche la valeur extraite
             self.simulation.hRobot = hRobot
             self.start_reading_file(file_path)
-            self.label_file_path.setText(file_path)
+            formated_file_path = self.format_file_path(file_path)
+            self.label_file_path.setText(formated_file_path)
+            self.label_file_path.setToolTip(file_path)
+            # self.show_file_path(file_path)
             self.update_all_graphs()
+
+    def format_file_path(self, path: str) -> str:
+        # If the path length is less than or equal to 150 characters, return the original path.
+        if len(path) <= 150:
+            return path
+
+        # Normalize and split the path to get individual parts
+        parts = [p for p in os.path.normpath(path).split(os.path.sep) if p]
+
+        # If there are no parts, return the original path
+        if not parts:
+            return path
+
+        # Determine the first directory
+        first_dir = parts[0]
+        # Get the file name from the path
+        file_name = os.path.basename(path)
+
+        # Construct and return the shortened path string
+        return f"{first_dir}/ ... /{file_name}"
 
     def get_hrobot_from_filename(self, file_path):
         """
