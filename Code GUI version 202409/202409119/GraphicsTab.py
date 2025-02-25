@@ -768,14 +768,14 @@ class GraphicsTab(QWidget):
                           color="red", scale=self.vector_scale_2d)
         self.ax2.set_title(f"Magnetic Field Direction on plane {axe}")
         if axe == "x":
-            ax2.set_xlabel(f'Y (mm)')
-            ax2.set_ylabel(f'Z (mm)')
+            self.ax2.set_xlabel(f'Y (mm)')
+            self.ax2.set_ylabel(f'Z (mm)')
         if axe == "y":
-            ax2.set_xlabel(f'X (mm)')
-            ax2.set_ylabel(f'Z (mm)')
+            self.ax2.set_xlabel(f'X (mm)')
+            self.ax2.set_ylabel(f'Z (mm)')
         if axe == "z":
-            ax2.set_xlabel(f'X (mm)')
-            ax2.set_ylabel(f'Y (mm)')
+            self.ax2.set_xlabel(f'X (mm)')
+            self.ax2.set_ylabel(f'Y (mm)')
 
         self.ax2.set_aspect("equal")
 
@@ -956,13 +956,12 @@ class GraphicsTab(QWidget):
                 tip = A + np.array([hcn1, hcn2])
 
                 plane = self.plane_selector_2d.currentText()
-                axes = plane.split(",")
                 # If vector_h exists, use it in the label; otherwise omit it
                 if hasattr(self, "vector_ht"):
                     h = self.vector_ht[best_index]
-                    label_text = f"H{axes[0]}={hcb1:.2f}\nH{axes[1]}={hcb2:.2f}\n|H|={h:.2f}"
+                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}\n|H|={h:.2f}"
                 else:
-                    label_text = f"H{axes[0]}={hcb1:.2f}\nH{axes[1]}={hcb2:.2f}"
+                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}"
                 self.annotation.xy = tip
                 self.annotation.set_text(label_text)
                 self.annotation.get_bbox_patch().set_facecolor("yellow")
