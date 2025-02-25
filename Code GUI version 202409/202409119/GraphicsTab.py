@@ -427,9 +427,9 @@ class GraphicsTab(QWidget):
 
         # Configurer les axes
         self.ax_3d.set_title("Vecteurs 3D du champ magnétique")
-        self.ax_3d.set_xlabel('x')
-        self.ax_3d.set_ylabel('y')
-        self.ax_3d.set_zlabel('z')
+        self.ax_3d.set_xlabel('X (mm)')
+        self.ax_3d.set_ylabel('Y (mm)')
+        self.ax_3d.set_zlabel('Z (mm)')
 
         # Rafraîchir le canvas
         self.canvas_3d.draw()
@@ -618,16 +618,27 @@ class GraphicsTab(QWidget):
         # Sélecteur de plan
         plane_label = QLabel("Plan:")
         plane_selector = QComboBox()
-        plane_selector.addItems(['y,z', 'x,z', 'x,y'])
+        plane_selector.addItems(['YZ', 'XZ', 'XY'])
         plane_selector.currentTextChanged.connect(plane_callback)
         plane_selector.setMinimumWidth(75)  # Réglez la largeur minimale si besoin
 
 
         # Sélecteur de valeur
-        value_label = QLabel("Valeur:")
+        value_label = QLabel("Coordonnée X::")
         value_selector = QComboBox()
         value_selector.currentTextChanged.connect(value_callback)
         value_selector.setMinimumWidth(75)  # Ajustez la largeur minimale si nécessaire
+
+        # Update the value_label text based on selected plane
+        def update_value_label(plane_text):
+            if plane_text == 'XY':
+                value_label.setText("Coordonnée Z:")
+            elif plane_text == 'XZ':
+                value_label.setText("Coordonnée Y:")
+            elif plane_text == 'YZ':
+                value_label.setText("Coordonnée X:")
+
+        plane_selector.currentTextChanged.connect(update_value_label)
 
         selector_layout.addWidget(plane_label, alignment=Qt.AlignLeft)
         selector_layout.addWidget(plane_selector, alignment=Qt.AlignLeft)
@@ -655,11 +666,11 @@ class GraphicsTab(QWidget):
             if p not in self.simulation.points_haute_resolution:
                 self.simulation.points_haute_resolution.append(p)
 
-        if plane == 'x,y':
+        if plane == 'XY':
             axe = 'z'
-        if plane == 'x,z':
+        if plane == 'XZ':
             axe = 'y'
-        if plane == 'y,z':
+        if plane == 'YZ':
             axe = 'x'
         if axe in ['x', 'y', 'z']:
             # Extraire les valeurs uniques arrondies
@@ -677,11 +688,11 @@ class GraphicsTab(QWidget):
     def update_tab_2d_plane(self):
         """Met à jour les graphiques de l'onglet Champ dans le plan 2D."""
         plane = self.plane_selector_2d.currentText()
-        if plane == "x,y":
+        if plane == "XY":
             axe = "z"
-        if plane == "x,z":
+        if plane == "XZ":
             axe = "y"
-        if plane == "y,z":
+        if plane == "YZ":
             axe = "x"
         print(axe)
         if self.value_selector_2d.count() == 0:
@@ -708,14 +719,14 @@ class GraphicsTab(QWidget):
             ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=self.vector_scale_2d)
             ax.set_title(f"Points sur le plan {axe}")
             if axe == "x":
-                ax.set_xlabel(f'y (mm)')
-                ax.set_ylabel(f'z (mm)')
+                ax.set_xlabel(f'Y (mm)')
+                ax.set_ylabel(f'Z (mm)')
             if axe == "y":
-                ax.set_xlabel(f'x (mm)')
-                ax.set_ylabel(f'z (mm)')
+                ax.set_xlabel(f'X (mm)')
+                ax.set_ylabel(f'Z (mm)')
             if axe == "z":
-                ax.set_xlabel(f'x (mm)')
-                ax.set_ylabel(f'y (mm)')
+                ax.set_xlabel(f'X (mm)')
+                ax.set_ylabel(f'Y (mm)')
             ax.set_ylabel('Other axis (mm)')  # Change accordingly
             self.figure_2d.colorbar(scatter, ax=ax, label='|H| (A/m)')
             self.canvas_2d.draw()
@@ -735,14 +746,14 @@ class GraphicsTab(QWidget):
         contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
         ax1.set_title(f"Norme du champ |H| ({axe})")
         if axe == "x":
-            ax1.set_xlabel(f'y (mm)')
-            ax1.set_ylabel(f'z (mm)')
+            ax1.set_xlabel(f'Y (mm)')
+            ax1.set_ylabel(f'Z (mm)')
         if axe == "y":
-            ax1.set_xlabel(f'x (mm)')
-            ax1.set_ylabel(f'z (mm)')
+            ax1.set_xlabel(f'X (mm)')
+            ax1.set_ylabel(f'Z (mm)')
         if axe == "z":
-            ax1.set_xlabel(f'x (mm)')
-            ax1.set_ylabel(f'y (mm)')
+            ax1.set_xlabel(f'X (mm)')
+            ax1.set_ylabel(f'Y (mm)')
         cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
         self.figure_2d.colorbar(contour, cax=cbar_ax, label='|H| (A/m)')
         ax2 = self.figure_2d.add_subplot(gs[0, 2])
@@ -750,25 +761,25 @@ class GraphicsTab(QWidget):
                             scale=self.vector_scale_2d)
         ax2.set_title(f"Direction du champ magnétique sur le plan {axe}")
         if axe == "x":
-            ax2.set_xlabel(f'y (mm)')
-            ax2.set_ylabel(f'z (mm)')
+            ax2.set_xlabel(f'Y (mm)')
+            ax2.set_ylabel(f'Z (mm)')
         if axe == "y":
-            ax2.set_xlabel(f'x (mm)')
-            ax2.set_ylabel(f'z (mm)')
+            ax2.set_xlabel(f'X (mm)')
+            ax2.set_ylabel(f'Z (mm)')
         if axe == "z":
-            ax2.set_xlabel(f'x (mm)')
-            ax2.set_ylabel(f'y (mm)')
+            ax2.set_xlabel(f'X (mm)')
+            ax2.set_ylabel(f'Y (mm)')
         ax2.set_aspect('equal')
         self.canvas_2d.draw()
 
     def update_tab_gaussian_and_radial(self):
         """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
         plane = self.plane_selector_3d.currentText()
-        if plane == "x,y":
+        if plane == "XY":
             axe = "z"
-        if plane == "x,z":
+        if plane == "XZ":
             axe = "y"
-        if plane == "y,z":
+        if plane == "YZ":
             axe = "x"
         if self.value_selector_3d.count() == 0:
             return
@@ -793,14 +804,14 @@ class GraphicsTab(QWidget):
             ax1.scatter(coord1, coord2, H_total, c=H_total, cmap='viridis', edgecolor='k', alpha=0.8)
             ax1.set_title(f"Points sur le plan {axe}")
             if axe == "x":
-                ax1.set_xlabel(f'y (mm)')
-                ax1.set_ylabel(f'z (mm)')
+                ax1.set_xlabel(f'Y (mm)')
+                ax1.set_ylabel(f'Z (mm)')
             if axe == "y":
-                ax1.set_xlabel(f'x (mm)')
-                ax1.set_ylabel(f'z (mm)')
+                ax1.set_xlabel(f'X (mm)')
+                ax1.set_ylabel(f'Z (mm)')
             if axe == "z":
-                ax1.set_xlabel(f'x (mm)')
-                ax1.set_ylabel(f'y (mm)')
+                ax1.set_xlabel(f'X (mm)')
+                ax1.set_ylabel(f'Y (mm)')
             ax1.set_zlabel('Amplitude |H| (A/m)')
             self.canvas_gaussian.draw()
             return
@@ -820,14 +831,14 @@ class GraphicsTab(QWidget):
         surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
         ax1.set_title(f'Amplitude du champ magnétique |H| ({axe})')
         if axe == "x":
-            ax1.set_xlabel(f'y (mm)')
-            ax1.set_ylabel(f'z (mm)')
+            ax1.set_xlabel(f'Y (mm)')
+            ax1.set_ylabel(f'Z (mm)')
         if axe == "y":
-            ax1.set_xlabel(f'x (mm)')
-            ax1.set_ylabel(f'z (mm)')
+            ax1.set_xlabel(f'X (mm)')
+            ax1.set_ylabel(f'Z (mm)')
         if axe == "z":
-            ax1.set_xlabel(f'x (mm)')
-            ax1.set_ylabel(f'y (mm)')
+            ax1.set_xlabel(f'X (mm)')
+            ax1.set_ylabel(f'Y (mm)')
         ax1.set_zlabel('Amplitude |H| (A/m)')
         self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
 
@@ -835,14 +846,14 @@ class GraphicsTab(QWidget):
         quiver = ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=self.vector_scale_2d)
         ax2.set_title(f"Champ vectoriel sur le plan {axe}")
         if axe == "x":
-            ax2.set_xlabel(f'y (mm)')
-            ax2.set_ylabel(f'z (mm)')
+            ax2.set_xlabel(f'Y (mm)')
+            ax2.set_ylabel(f'Z (mm)')
         if axe == "y":
-            ax2.set_xlabel(f'x (mm)')
-            ax2.set_ylabel(f'z (mm)')
+            ax2.set_xlabel(f'X (mm)')
+            ax2.set_ylabel(f'Z (mm)')
         if axe == "z":
-            ax2.set_xlabel(f'x (mm)')
-            ax2.set_ylabel(f'y (mm)')
+            ax2.set_xlabel(f'X (mm)')
+            ax2.set_ylabel(f'Y (mm)')
         ax2.set_aspect('equal')
 
         self.canvas_gaussian.draw()

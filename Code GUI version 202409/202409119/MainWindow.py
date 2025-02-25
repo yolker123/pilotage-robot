@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.tektronix = None
+        self.tektronix = Tektronix(self)
         self.measurementNumber = None
         self.scope = None
         self.executeFunction.connect(self.handleExecuteFunction)
@@ -440,7 +440,10 @@ class MainWindow(QMainWindow):
         grid_ctrl.addWidget(self.buttonShowCoords, 4, 3)
         grid_ctrl.addWidget(self.buttonSavePoint, 3, 3)
         grid_ctrl.addWidget(self.buttonOpenPoint, 2, 3)
-
+        # python
+        self.robotHeight = 481.1 - 211.1
+        self.robotHeightLabel = QLabel(f"Robot height: {self.robotHeight}")
+        grid_ctrl.addWidget(self.robotHeightLabel, 6, 0, 1, 3)
         # Define widgets for figure grid
         self.labelFigureSelector = QLabel("Choose Measurement Method :")
         self.figureSelector = QComboBox()
@@ -539,7 +542,7 @@ class MainWindow(QMainWindow):
 
         grid = QGridLayout()
 
-        text_widget.setLayout(grid)  # set grid QGridlayout to text_widget QWidget 
+        text_widget.setLayout(grid)  # set grid QGridlayout to text_widget QWidget
 
         # ptr_widget = QWidget(self.right_widget)
         # ptr_widget.setGeometry(0, 630, 400, 80)
@@ -571,6 +574,7 @@ class MainWindow(QMainWindow):
         STOP_grid.addWidget(STOP_btn)
         STOP_widget.setLayout(STOP_grid)
         self.udpdateEnable()  # udpdateEnable() is a class defined in line 929
+
 
     # ------ MOCHE ---------
     def lecroy(self):
@@ -618,16 +622,16 @@ class MainWindow(QMainWindow):
 
     def initOscilloscope(self):
         if self.oscilloName == "tektronix":
-            self.tektronix = Tektronix(self)
             self.tektronix.init_connection()
             self.buttonConnectOscilloscope.setEnabled(False)
             self.buttonSetupOscilloscope.setEnabled(True)
         if self.buttonTektronix.isEnabled() and not self.buttonLecroy.isEnabled():
+            self.tektronix.remove_device()
             rm = oscilloscopeConnection(
                 idOscilloscope)  # oscilloscopeConnection is a function in oscilloscopeAcquisition
             # display the action on the specific Text Boxt
             self.validationText.append(
-                "Oscilloscope Connection to: " + str(rm.list_resources()))  # settext is to write text in validationText
+                "Oscilloscope Lecroy Connection to: " + str(rm.list_resources()))  # settext is to write text in validationText
 
             # variable set to true in order to enable the setupOscilloscope fonction
             self.buttonSetupOscilloscope.setEnabled(True)
@@ -655,6 +659,8 @@ class MainWindow(QMainWindow):
         self.robot = createRobot(self.RobID)
         err = self.robot.OpenComm(COM)
         if err != 0:
+            self.validationText.append("Robot connection attempt failed.")
+            self.fail_box("Robot connection attempt failed.")
             print(f"Error failed to connect robot {err}")
             return
 
@@ -695,7 +701,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -729,7 +735,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -781,7 +787,7 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
 
-        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"cube", x, y, z, log_dir, self.oscilloName,  self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -835,7 +841,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName,self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -878,7 +884,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -1188,6 +1194,10 @@ class MainWindow(QMainWindow):
         self.robot.SetSpeed(speed)
         self.robot.Move(0, 0, self.distanceMove, 5000)
 
+        _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
+        self.robotHeight = float(_z) - 211.1
+        self.robotHeightLabel.setText(f"Robot height: {self.robotHeight}")
+
         def gui2():
             self.canMove = True
             self.udpdateEnable()
@@ -1241,6 +1251,10 @@ class MainWindow(QMainWindow):
 
         self.robot.SetSpeed(speed)
         self.robot.Move(0, 0, -self.distanceMove, 5000)
+
+        _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
+        self.robotHeight = float(_z) - 211.1
+        self.robotHeightLabel.setText(f"Robot height: {self.robotHeight}")
 
         def gui2():
             self.canMove = True

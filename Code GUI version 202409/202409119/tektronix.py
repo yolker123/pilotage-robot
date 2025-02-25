@@ -19,7 +19,7 @@ import time
 from bddSetupOscilloscope import *
 
 # Configuration initiale
-OSCILLOSCOPE_IP = "172.16.121.115"
+OSCILLOSCOPE_IP = "172.16.115.218"
 visa_address = f"TCPIP::{OSCILLOSCOPE_IP}::INSTR"
 
 pwd = os.getcwd() # Répertoire de travail actuel
@@ -40,6 +40,7 @@ class Tektronix:
         self.filename = ""
         self.current_time_str = None
         self.main_window = main_window
+        self.device_manager = None
 
     def init_connection(self):
         """
@@ -48,21 +49,26 @@ class Tektronix:
         self.measurement_number = 0
         while self.scope is None:
             try:
-                device_manager = DeviceManager(verbose=False)
-                atexit.register(device_manager.close)
-                device_manager.visa_library = PYVISA_PY_BACKEND
-                device_manager.setup_cleanup_enabled = False
-                device_manager.teardown_cleanup_enabled = False
+                self.device_manager = DeviceManager(verbose=False)
+                atexit.register(self.device_manager.close)
+                self.device_manager.visa_library = PYVISA_PY_BACKEND
+                self.device_manager.setup_cleanup_enabled = False
+                self.device_manager.teardown_cleanup_enabled = False
 
-                scope: MSO6B = device_manager.add_scope(OSCILLOSCOPE_IP)
+                scope: MSO6B = self.device_manager.add_scope(OSCILLOSCOPE_IP)
                 print("Connected to:", scope.idn_string)
                 self.scope = scope
-                self.main_window.validationText.append("Connected to the oscilloscope")
+                self.main_window.validationText.append("Connected to the oscilloscope Tektronix")
             except Exception as e:
-                self.main_window.validationText.append("Connection attempt failed, retrying...")
-                self.main_window.fail_box("Connection attempt failed, retrying...")
-                print("Connection attempt failed. Retrying...")
+                self.main_window.validationText.append("Oscilloscope connection attempt failed, retrying...")
+                self.main_window.fail_box("Oscilloscope connection attempt failed, retrying...")
+                print("Oscilloscope connection attempt failed. Retrying...")
                 print(f"Erreur lors de la connexion à l'oscilloscope : {e}")
+
+    def remove_device(self):
+        if self.device_manager is not None:
+            self.device_manager.remove_all_devices()
+            self.scope = None
 
 
     # Fonction pour mesurer les tensions maximales
@@ -82,6 +88,8 @@ class Tektronix:
         Définit les paramètres d'acquisition selon la configuration fournie.
         """
         # self.scope.commands.acquire.state.write("OFF")
+
+        self.scope.write("FPANEL:PRESS DEFaultsetup")
         self.scope.commands.acquire.mode.write("Sample")
         # Dictionnaires pour stocker les mesures par canal
         channel_map = {
@@ -112,7 +120,13 @@ class Tektronix:
         unique_id = 1
         self.id_map = []
 
+        self.scope.turn_channel_off("CH1")
+        self.scope.turn_channel_off("CH2")
+        self.scope.turn_channel_off("CH3")
+        self.scope.turn_channel_off("CH4")
         for channel, measures in self.channel_measurements.items():
+            print(channel)
+            self.scope.turn_channel_on(channel)
             for meas_type in measures:
                 print(f"Configuration de la mesure {meas_type} sur le canal {channel}")
                 print(f"ID unique : {unique_id}", meas_type, channel)
@@ -141,10 +155,13 @@ class Tektronix:
         self.main_window.validationText.append("Oscilloscope Configured")
 
 
-    def get_measures(self, x, y, z):
+    def get_measures(self, point):
         """
         Lance une mesure sur les canaux configurés et enregistre les résultats dans un fichier.
         """
+        point_ = point.strip("()")
+        values = point_.split()
+        x, y, z = map(float, values)
         # print(f"Run {run + 1}/{num_runs}")
         self.scope.commands.acquire.state.write("ON")
 
@@ -209,7 +226,7 @@ class Tektronix:
             print("La configuration 'wf_img_config' n'est pas définie")
 
         return values
-    def create_file(self, hauteur):
+    def create_file(self, hauteur, form):
         """
         Crée un fichier CSV pour sauvegarder les mesures et écrit l'en-tête des colonnes.
 
@@ -218,7 +235,7 @@ class Tektronix:
         """
         # Ouvrir le fichier pour écrire l'en-tête
         self.current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
-        self.filename = os.path.join(pwd, "Measure", f"MaxAmp_{self.current_time_str}_{hauteur}.csv")
+        self.filename = os.path.join(pwd, "Measure", f"{form}_{self.current_time_str}_{hauteur}.csv")
         with open(self.filename, 'w') as f:
             f.write(self.header_line)
 

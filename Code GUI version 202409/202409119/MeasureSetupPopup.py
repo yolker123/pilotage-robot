@@ -9,7 +9,7 @@ global measure_config
 global wf_img_config
 
 # Constantes
-NB_MAX_P = 8  # Nombre maximal de P
+nb_max_p_lecroy = 8  # Nombre maximal de P
 
 # Dictionnaire des options pour les mesures
 OPTIONS = {
@@ -296,14 +296,15 @@ class MeasureSetupPopup(QWidget):
         if sender.isChecked():
             # Vérifier si l'ajout dépasse le maximum autorisé
             current_count = len(measure_config)
-            if current_count >= NB_MAX_P:
-                # Revenir en arrière et avertir l'utilisateur
-                sender.blockSignals(True)
-                sender.setChecked(False)
-                sender.blockSignals(False)
-                QMessageBox.warning(self, "Maximum Atteint", f"Impossible d'ajouter plus de {NB_MAX_P} mesures.")
-                return
-            # Ajouter à measure_config si non déjà présent
+            if self.oscilloName == "lecroy":
+                if current_count >= nb_max_p_lecroy:
+                    # Revenir en arrière et avertir l'utilisateur
+                    sender.blockSignals(True)
+                    sender.setChecked(False)
+                    sender.blockSignals(False)
+                    QMessageBox.warning(self, "Maximum Atteint", f"Impossible d'ajouter plus de {nb_max_p_lecroy} mesures.")
+                    return
+                # Ajouter à measure_config si non déjà présent
             if not any(msr.get("ch") == channel_key and msr.get("info") == info_name for msr in measure_config):
                 measure_config.append({"ch": channel_key, "info": info_name})
         else:
@@ -312,10 +313,11 @@ class MeasureSetupPopup(QWidget):
                                  not (msr.get("ch") == channel_key and msr.get("info") == info_name)]
 
         # Mettre à jour l'état du bouton de validation en fonction de measure_config
-        if len(measure_config) > NB_MAX_P:
-            self.validateButton.setEnabled(False)
-        else:
-            self.validateButton.setEnabled(True)
+        if self.oscilloName == "lecroy":
+            if len(measure_config) > nb_max_p_lecroy:
+                self.validateButton.setEnabled(False)
+            else:
+                self.validateButton.setEnabled(True)
 
     def validate(self):
         """

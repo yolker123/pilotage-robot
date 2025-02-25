@@ -11,7 +11,7 @@ import datetime
 import time
 import os
 
-class lecroy():
+class Lecroy():
 
     # Constructor
     def __init__(self, pyvisa_instr, dso, num_channels=8, debug=False):

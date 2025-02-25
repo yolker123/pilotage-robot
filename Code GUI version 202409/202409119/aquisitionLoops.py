@@ -60,7 +60,10 @@ class Point:
         if oscilloName == "lecroy":
             getAcquisition(mfa, f"{self.name}", 0, log_dir)
         if oscilloName == "tektronix":
-            values = tektronix.get_measures(self.x, self.y, self.z)
+            values = tektronix.get_measures(f"{self.name}")
+            point_ = self.name.strip("()")
+            val = point_.split()
+            x, y, z = map(float, val)
             print(values)
             Hx = None
             Hy = None
@@ -86,7 +89,7 @@ class Point:
                 if Hz is None:
                     Hz= 0
                 mfa.simulation.measuredPoints.append({
-                    'x': self.x, 'y': self.y, 'z': self.z,
+                    'x': x, 'y': y, 'z': z,
                     'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display': True
                 })
                 mfa.update_all_graphs()
@@ -104,12 +107,12 @@ def createRobot(type):
 """
 
 
-def Acquire_points(points, robot, mfa, x_ptr=None, y_ptr=None, z_ptr=None, log_dir="logAcquisition", oscilloName="",
+def Acquire_points(points, robot, mfa, form, x_ptr=None, y_ptr=None, z_ptr=None, log_dir="logAcquisition", oscilloName="",
                    tektronix=None):
     z_ptr_reel = z_ptr - 211.1
     mfa.simulation.hRobot = z_ptr_reel
     if oscilloName == "tektronix":
-        tektronix.create_file(z_ptr_reel)
+        tektronix.create_file(z_ptr_reel, form)
         tektronix.scope.write("FPANEL:PRESS AUTOset")
     for point in points:
 

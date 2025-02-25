@@ -20,13 +20,12 @@ global wf_img_config
 """
 def oscilloscopeConnection(id_oscillo):
     global lecroy
-
     scope = win32com.client.Dispatch("LeCroy.ActiveDSOCtrl.1") #creates instances of the ActiveDSO Control
     scope.MakeConnection("USBTMC:" + id_oscillo)  #Connects to the oscilloscope
     rm = pyvisa.ResourceManager()   #pyvisa.ResourceManager()  get return value of connection, 
                                     #'USB0::0x05FF::0x1023::3561N16324::INSTR' is the series of oscilloscope. if it's in the return, oscilloscope connected.
     print(rm.list_resources())
-    lecroy = lecroy(pyvisa_instr=rm.open_resource(id_oscillo, timeout=timeout_commands), dso=scope)
+    lecroy = Lecroy(pyvisa_instr=rm.open_resource(id_oscillo, timeout=timeout_commands), dso=scope)
     lecroy.scope.write("TRMD NORM")
     return rm
 
