@@ -966,112 +966,121 @@ class GraphicsTab(QWidget):
         return coord1, coord2, H_total, H_component1, H_component2, H_component1_base, H_component2_base
 
     def motion_hover(self, event):
+        """Handle mouse hover events for vector annotations."""
         if event.inaxes == self.ax2 and hasattr(self, "vector_bases"):
-            P = np.array([event.xdata, event.ydata])
-            tol = 0.8  # tolerance; adjust if needed
-            best_index = None
-            best_distance = tol
-            # Loop over all vectors
-            for i, base in enumerate(self.vector_bases):
-                A = np.array(base)
-                hcn1 = self.vector_hcn1[i]
-                hcn2 = self.vector_hcn2[i]
-                B = A + np.array([hcn1, hcn2])
-                AB = B - A
-                AP = P - A
-                if np.dot(AB, AB) == 0:
-                    distance = np.linalg.norm(AP)
-                else:
-                    t = np.dot(AP, AB) / np.dot(AB, AB)
-                    if t < 0:
-                        closest = A
-                    elif t > 1:
-                        closest = B
-                    else:
-                        closest = A + t * AB
-                    distance = np.linalg.norm(P - closest)
-                if distance < best_distance:
-                    best_distance = distance
-                    best_index = i
-            if best_index is not None:
-                A = np.array(self.vector_bases[best_index])
-                hcb1 = self.vector_hcb1[best_index]
-                hcb2 = self.vector_hcb2[best_index]
-                hcn1 = self.vector_hcn1[best_index]
-                hcn2 = self.vector_hcn2[best_index]
-                # Position annotation at the arrow tip
-                tip = A + np.array([hcn1, hcn2])
+            self._handle_hover(event, "2d")
+        elif event.inaxes == self.ax_gaussian and hasattr(self, "gaussian_vector_bases"):
+            self._handle_hover(event, "3d")
 
-                plane = self.plane_selector_2d.currentText()
-                # If vector_h exists, use it in the label; otherwise omit it
-                if hasattr(self, "vector_ht"):
-                    h = self.vector_ht[best_index]
-                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}\n|H|={h:.2f}"
-                else:
-                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}"
-                self.annotation.xy = tip
-                self.annotation.set_text(label_text)
-                self.annotation.get_bbox_patch().set_facecolor("yellow")
-                self.annotation.set_alpha(0.8)
-                self.annotation.set_visible(True)
-                self.canvas_2d.draw_idle()
+    def _handle_hover(self, event, mode):
+        """Handle hover logic for both 2D and 3D modes."""
+        config = self._get_config(mode)
+        P = np.array([event.xdata, event.ydata])
+        best_index = self._find_closest_vector(P, config)
+
+        if best_index is not None:
+            self._update_annotation(best_index, config)
+        else:
+            self._hide_annotation(config)
+
+    def _get_config(self, mode):
+        """Get configuration based on mode."""
+        if mode == "2d":
+            return {
+                'vectors': self.vector_bases,
+                'hcn1': self.vector_hcn1,
+                'hcn2': self.vector_hcn2,
+                'hcb1': self.vector_hcb1,
+                'hcb2': self.vector_hcb2,
+                'ht': 'vector_ht',
+                'annotation': self.annotation,
+                'canvas': self.canvas_2d,
+                'plane_selector': self.plane_selector_2d,
+                'use_projection': True
+            }
+        return {
+            'vectors': self.gaussian_vector_bases,
+            'hcn1': self.gaussian_vector_hcn1,
+            'hcn2': self.gaussian_vector_hcn2,
+            'hcb1': self.gaussian_vector_hcb1,
+            'hcb2': self.gaussian_vector_hcb2,
+            'ht': 'gaussian_vector_ht',
+            'annotation': self.gaussian_annotation,
+            'canvas': self.canvas_gaussian,
+            'plane_selector': self.plane_selector_3d,
+            'use_projection': False
+        }
+
+    def _find_closest_vector(self, P, config):
+        """Find the closest vector to point P."""
+        tol = 1
+        best_index = None
+        best_distance = tol
+
+        for i, base in enumerate(config['vectors']):
+            A = np.array(base)
+            hcn1, hcn2 = config['hcn1'][i], config['hcn2'][i]
+
+            if config['use_projection']:
+                distance = self._calculate_projection_distance(P, A, hcn1, hcn2)
             else:
-                if self.annotation.get_visible():
-                    self.annotation.set_visible(False)
-                    self.canvas_2d.draw_idle()
-        if event.inaxes == self.ax_gaussian and hasattr(self, "gaussian_vector_bases"):
-            P = np.array([event.xdata, event.ydata])
-            tol = 0.8  # tolerance; adjust if needed
-            best_index = None
-            best_distance = tol
-            # Loop over all vectors
-            for i, base in enumerate(self.gaussian_vector_bases):
-                A = np.array(base)
-                hcn1 = self.gaussian_vector_hcn1[i]
-                hcn2 = self.gaussian_vector_hcn2[i]
-                B = A + np.array([hcn1, hcn2])
-                AB = B - A
-                AP = P - A
-                if np.dot(AB, AB) == 0:
-                    distance = np.linalg.norm(AP)
-                else:
-                    t = np.dot(AP, AB) / np.dot(AB, AB)
-                    if t < 0:
-                        closest = A
-                    elif t > 1:
-                        closest = B
-                    else:
-                        closest = A + t * AB
-                    distance = np.linalg.norm(P - closest)
-                if distance < best_distance:
-                    best_distance = distance
-                    best_index = i
-            if best_index is not None:
-                A = np.array(self.gaussian_vector_bases[best_index])
-                hcb1 = self.gaussian_vector_hcb1[best_index]
-                hcb2 = self.gaussian_vector_hcb2[best_index]
-                hcn1 = self.gaussian_vector_hcn1[best_index]
-                hcn2 = self.gaussian_vector_hcn2[best_index]
-                # Position annotation at the arrow tip
-                tip = A + np.array([hcn1, hcn2])
+                vector_tip = A + np.array([hcn1, hcn2])
+                distance = np.linalg.norm(P - vector_tip)
 
-                plane = self.plane_selector_3d.currentText()
-                # If vector_h exists, use it in the label; otherwise omit it
-                if hasattr(self, "gaussian_vector_ht"):
-                    h = self.vector_ht[best_index]
-                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}\n|H|={h:.2f}"
-                else:
-                    label_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}"
-                self.gaussian_annotation.xy = tip
-                self.gaussian_annotation.set_text(label_text)
-                self.gaussian_annotation.get_bbox_patch().set_facecolor("yellow")
-                self.gaussian_annotation.set_alpha(0.8)
-                self.gaussian_annotation.set_visible(True)
-                self.canvas_gaussian.draw_idle()
-            else:
-                if self.gaussian_annotation.get_visible():
-                    self.gaussian_annotation.set_visible(False)
-                    self.canvas_gaussian.draw_idle()
+            if distance < best_distance:
+                best_distance = distance
+                best_index = i
+                if not config['use_projection']:
+                    break
 
+        return best_index
 
+    def _calculate_projection_distance(self, P, A, hcn1, hcn2):
+        """Calculate distance using vector projection."""
+        B = A + np.array([hcn1, hcn2])
+        AB = B - A
+        AP = P - A
 
+        if np.dot(AB, AB) == 0:
+            return np.linalg.norm(AP)
+
+        t = np.dot(AP, AB) / np.dot(AB, AB)
+        if t < 0:
+            closest = A
+        elif t > 1:
+            closest = B
+        else:
+            closest = A + t * AB
+        return np.linalg.norm(P - closest)
+
+    def _update_annotation(self, index, config):
+        """Update annotation with vector information."""
+        A = np.array(config['vectors'][index])
+        hcn1, hcn2 = config['hcn1'][index], config['hcn2'][index]
+        hcb1, hcb2 = config['hcb1'][index], config['hcb2'][index]
+        tip = A + np.array([hcn1, hcn2])
+
+        plane = config['plane_selector'].currentText()
+        label_text = self._create_label_text(plane, hcb1, hcb2, config['ht'], index)
+
+        annotation = config['annotation']
+        annotation.xy = tip
+        annotation.set_text(label_text)
+        annotation.get_bbox_patch().set_facecolor("yellow")
+        annotation.set_alpha(0.8)
+        annotation.set_visible(True)
+        config['canvas'].draw_idle()
+
+    def _create_label_text(self, plane, hcb1, hcb2, ht_attr, index):
+        """Create label text for annotation."""
+        base_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}"
+        if hasattr(self, ht_attr):
+            h = getattr(self, ht_attr)[index]
+            return f"{base_text}\n|H|={h:.2f}"
+        return base_text
+
+    def _hide_annotation(self, config):
+        """Hide annotation if visible."""
+        if config['annotation'].get_visible():
+            config['annotation'].set_visible(False)
+            config['canvas'].draw_idle()
