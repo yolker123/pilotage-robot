@@ -20,13 +20,12 @@ global wf_img_config
 """
 def oscilloscopeConnection(id_oscillo):
     global lecroy
-
     scope = win32com.client.Dispatch("LeCroy.ActiveDSOCtrl.1") #creates instances of the ActiveDSO Control
     scope.MakeConnection("USBTMC:" + id_oscillo)  #Connects to the oscilloscope
     rm = pyvisa.ResourceManager()   #pyvisa.ResourceManager()  get return value of connection, 
                                     #'USB0::0x05FF::0x1023::3561N16324::INSTR' is the series of oscilloscope. if it's in the return, oscilloscope connected.
     print(rm.list_resources())
-    lecroy = lecroy(pyvisa_instr=rm.open_resource(id_oscillo, timeout=timeout_commands), dso=scope)
+    lecroy = Lecroy(pyvisa_instr=rm.open_resource(id_oscillo, timeout=timeout_commands), dso=scope)
     lecroy.scope.write("TRMD NORM")
     return rm
 
@@ -67,7 +66,7 @@ def getOscillocopeConfiguration():
 * @brief Get six specifics variables mesured by the oscilloscope and record
           the measures and the screenshot of the window.
 """
-def getAcquisition(nomPoint, err=0, acquisition_directory="logAcquisition", config = None):
+def getAcquisition(mfa, nomPoint, err=0, acquisition_directory="logAcquisition", config = None):
     if config is None:
         config = measure_config
         
@@ -99,7 +98,7 @@ def getAcquisition(nomPoint, err=0, acquisition_directory="logAcquisition", conf
     conf = formatMeasureConfig(config)
     instant = current_time.strftime('%Y-%m-%d_%H-%M-%S')
     if len(conf) > 0:
-        captureMeasures(conf, current_time, instant, acquisition_directory, nomPoint, log_filepath)
+        captureMeasures(conf, mfa, current_time, instant, acquisition_directory, nomPoint, log_filepath)
 
     for kt, it in wf_img_config.items():
         if it.get("wf"):
@@ -147,10 +146,10 @@ def captureScreen(acquisition_directory, instant, chan, nomPoint):
 """
  * @brief prend les P 
 """
-def captureMeasures(conf, current_time, instant, acquisition_directory, nomPoint, log_filepath):
+def captureMeasures(conf, mfa, current_time, instant, acquisition_directory, nomPoint, log_filepath):
     # Get value of measurement channels
     measures={}
-    
+
     
     for kp, p in conf.items():
         measures[f"{p[0]}_{p[1]}"] = "{:.4f}".format(lecroy.getValueOnChannel(f'P{kp}', 'value')) if isinstance(lecroy.getValueOnChannel(f'P{kp}', 'value'), (float, int)) else "{}".format(lecroy.getValueOnChannel(f'P{kp}', 'value'))
@@ -174,6 +173,43 @@ def captureMeasures(conf, current_time, instant, acquisition_directory, nomPoint
         for km, m in measures.items():
             row1.append(km)
             row2.append(m)
+            channel = km.split("_")[0]
+            measure = km.split("_")[1]
+            print("channel", channel)
+            print("measure", measure)
+            Hx = None
+            Hy = None
+            Hz = None
+            if measure == "Maximum" and channel == 'C1':
+                print("hellllooooo ", m)
+                print(mfa.simulation.S)
+                print(mfa.simulation.omega)
+                Bx = float(m) / (mfa.simulation.S * mfa.simulation.omega)
+                Hx = Bx / mfa.simulation.mu_0
+                print("Bx", Bx)
+                print("Hx", Hx)
+            if measure == "Maximum" and channel == 'C2':
+                By = float(m) / (mfa.simulation.S * mfa.simulation.omega)
+                Hy = By / mfa.simulation.mu_0
+            if measure == "Maximum" and channel == 'C3':
+                Bz = float(m) / (mfa.simulation.S * mfa.simulation.omega)
+                Hz = Bz / mfa.simulation.mu_0
+
+            if Hx is not None or Hy is not None or Hz is not None:
+                nomPoint_ = nomPoint.strip("()")
+                values = nomPoint_.split()
+                x, y, z = map(float, values)
+                if Hx is None:
+                    Hx = 0
+                if Hy is None:
+                    Hy = 0
+                if Hz is None:
+                    Hz = 0
+                mfa.simulation.measuredPoints.append({
+                    'x': x, 'y': y, 'z': z,
+                    'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display': True
+                })
+                mfa.update_all_graphs()
         writer.writerow(row1)
         writer.writerow(row2)
 

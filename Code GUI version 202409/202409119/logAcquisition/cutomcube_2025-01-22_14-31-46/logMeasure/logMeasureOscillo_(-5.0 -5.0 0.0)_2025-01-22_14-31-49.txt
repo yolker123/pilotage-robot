@@ -1,0 +1,9 @@
+(-5.0 -5.0 0.0), time:14-31-49
+C1_FREQUENCY:13001.5405
+C1_Frequency:12995.3756
+C1_MAXIMUM:1.0114
+C1_Maximum:1.0114
+C1_PK2PK:No Data Available
+
+C1_Pic To Pic:No Data Available
+

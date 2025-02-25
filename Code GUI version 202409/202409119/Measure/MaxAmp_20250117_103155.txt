@@ -1,1 +1,0 @@
-Timestamp, x, y, z, CH1_FREQUENCY, CH1_FREQUENCY, CH1_RMS, CH1_RMS

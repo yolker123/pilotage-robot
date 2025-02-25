@@ -15,10 +15,12 @@ from concurrent.futures import Future
 
 
 from MeasureSetupPopup import *
-from NewWindowWithData import MagneticFieldApp
+from GraphicsTab import GraphicsTab
 from tektronix import *
+from ConvertFormats import convert_formats
 
 import os
+
 if os.name != 'posix':
     from aquisitionLoops import *
     from Robot import *
@@ -132,7 +134,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.tektronix = None
+        self.tektronix = Tektronix(self)
         self.measurementNumber = None
         self.scope = None
         self.executeFunction.connect(self.handleExecuteFunction)
@@ -177,7 +179,7 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget()
         tabs.addTab(centralArea, "Mesures")
-        self.mfa = MagneticFieldApp()
+        self.mfa = GraphicsTab()
         tabs.addTab(self.mfa, "Algo")
 
         self.setCentralWidget(tabs)  # The defaut value of centralArea is set in self.resize(1200, 800)
@@ -292,9 +294,19 @@ class MainWindow(QMainWindow):
         # btn_widgetAxes.setGeometry(0, 170, 400, 50)
         grid_btnAxes2.addWidget(self.buttonRobot5Axes, 1, 0)  # add widgets to ths gridlayout
         grid_btnAxes2.addWidget(self.buttonRobot6Axes, 1, 1)
+
+        # self.toastConnected = QPushButton("Connected")
+        # self.toastConnected.clicked.connect(self.fail_box("Test"))
+        #
+        # self.toastSetup = QPushButton("SetupDone")
+        # self.toastSetup.clicked.connect(self.toast2)
+        # grid_btnAxes2.addWidget(self.toastConnected, 2, 0)  # add widgets to ths gridlayout
+        # grid_btnAxes2.addWidget(self.toastSetup, 2, 1)
+
         btn_widgetAxes2.setLayout(
             grid_btnAxes2)  # set this gridlayout(grid_btnAxes) to btn_widgetAxes widget which is defined in line 143
         # setLayout is to display the buttons, if not the button you set will not display on the screen
+
 
         # button to connect robot
         self.buttonConnectRobot = QPushButton('Robot Initialization')
@@ -428,7 +440,10 @@ class MainWindow(QMainWindow):
         grid_ctrl.addWidget(self.buttonShowCoords, 4, 3)
         grid_ctrl.addWidget(self.buttonSavePoint, 3, 3)
         grid_ctrl.addWidget(self.buttonOpenPoint, 2, 3)
-
+        # python
+        self.robotHeight = 481.1 - 211.1
+        self.robotHeightLabel = QLabel(f"Robot height: {self.robotHeight}")
+        grid_ctrl.addWidget(self.robotHeightLabel, 6, 0, 1, 3)
         # Define widgets for figure grid
         self.labelFigureSelector = QLabel("Choose Measurement Method :")
         self.figureSelector = QComboBox()
@@ -527,7 +542,7 @@ class MainWindow(QMainWindow):
 
         grid = QGridLayout()
 
-        text_widget.setLayout(grid)  # set grid QGridlayout to text_widget QWidget 
+        text_widget.setLayout(grid)  # set grid QGridlayout to text_widget QWidget
 
         # ptr_widget = QWidget(self.right_widget)
         # ptr_widget.setGeometry(0, 630, 400, 80)
@@ -542,9 +557,9 @@ class MainWindow(QMainWindow):
 
         grid = QVBoxLayout()  # creat a QVBoxLayout--> organizes your widgets vertically in this window.no need use QGridLayout()
         global validationText
-        validationText = QTextEdit()  # creat textbox
-        validationText.setEnabled(False)  # False --> cant be edit, just display
-        grid.addWidget(validationText)  # add validationText (test box) to the VBoxlayout named grid
+        self.validationText = QTextEdit()  # creat textbox
+        self.validationText.setEnabled(False)  # False --> cant be edit, just display
+        grid.addWidget(self.validationText)  # add validationText (test box) to the VBoxlayout named grid
         validTextBox_widget.setLayout(grid)
 
         # ------------------------Emergency STOP Button----------------------
@@ -559,6 +574,7 @@ class MainWindow(QMainWindow):
         STOP_grid.addWidget(STOP_btn)
         STOP_widget.setLayout(STOP_grid)
         self.udpdateEnable()  # udpdateEnable() is a class defined in line 929
+
 
     # ------ MOCHE ---------
     def lecroy(self):
@@ -606,16 +622,16 @@ class MainWindow(QMainWindow):
 
     def initOscilloscope(self):
         if self.oscilloName == "tektronix":
-            self.tektronix = Tektronix()
             self.tektronix.init_connection()
             self.buttonConnectOscilloscope.setEnabled(False)
             self.buttonSetupOscilloscope.setEnabled(True)
         if self.buttonTektronix.isEnabled() and not self.buttonLecroy.isEnabled():
+            self.tektronix.remove_device()
             rm = oscilloscopeConnection(
                 idOscilloscope)  # oscilloscopeConnection is a function in oscilloscopeAcquisition
             # display the action on the specific Text Boxt
-            validationText.setText(
-                "Oscilloscope Connection: " + str(rm.list_resources()))  # settext is to write text in validationText
+            self.validationText.append(
+                "Oscilloscope Lecroy Connection to: " + str(rm.list_resources()))  # settext is to write text in validationText
 
             # variable set to true in order to enable the setupOscilloscope fonction
             self.buttonSetupOscilloscope.setEnabled(True)
@@ -629,10 +645,10 @@ class MainWindow(QMainWindow):
         if self.oscilloName == "lecroy":
             current_time = datetime.datetime.now()
             log_dir = f"logAcquisition/measure_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
-            getAcquisition("(0 0 0)", 0, log_dir)
-            validationText.setText("Autosetup Done")
+            getAcquisition(self.mfa, "(0 0 0)", 0, log_dir)
+            self.validationText.append("Autosetup Done")
         if self.oscilloName == "tektronix":
-            tektronix_get_measures(self.scope, self.measurementNumber)
+            tektronix.tektronix_get_measures(self.scope, self.measurementNumber)
 
     """
      * @brief Initialize the Robot position 
@@ -643,6 +659,8 @@ class MainWindow(QMainWindow):
         self.robot = createRobot(self.RobID)
         err = self.robot.OpenComm(COM)
         if err != 0:
+            self.validationText.append("Robot connection attempt failed.")
+            self.fail_box("Robot connection attempt failed.")
             print(f"Error failed to connect robot {err}")
             return
 
@@ -672,7 +690,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on NFC Fonction")
+            self.validationText.append("Click on NFC Fonction")
 
         self.executeFunction.emit(gui1)  # call gui1 function in main window thread
 
@@ -683,7 +701,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -706,7 +724,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on EMVCO Fonction")
+            self.validationText.append("Click on EMVCO Fonction")
 
         self.executeFunction.emit(gui1)  # call gui1 function in main window thread
 
@@ -717,7 +735,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -750,7 +768,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on customCube Fonction")
+            self.validationText.append("Click on customCube Fonction")
 
             _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
             x = float(_x)
@@ -769,7 +787,10 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
 
-        Acquire_points(dataset, self.robot, self.mfa, x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"cube", x, y, z, log_dir, self.oscilloName,  self.tektronix)
+        if self.oscilloName == "lecroy":
+            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
+
 
         def gui2():
             self.canMove = True
@@ -805,7 +826,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on customCylindre Function")
+            self.validationText.append("Click on customCylindre Function")
 
             _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
             x = float(_x)
@@ -820,7 +841,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir,self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -848,7 +869,7 @@ class MainWindow(QMainWindow):
             self.canMove = False
             self.buttonSetupOscilloscope.setEnabled(False)
             self.udpdateEnable()
-            validationText.setText("Click on customSemisphere Function")
+            self.validationText.append("Click on customSemisphere Function")
 
             _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
             x = float(_x)
@@ -863,7 +884,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, x, y, z, log_dir, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
 
         def gui2():
             self.canMove = True
@@ -884,12 +905,12 @@ class MainWindow(QMainWindow):
         z = float(_z)
         if self.robot.type == "DENSO":
             err = self.robot.Energize(0)
-        getAcquisition(f"({x - self.fixed_x} {y - self.fixed_y} {z - self.fixed_z})", 0, self.point_log_dir)
+        getAcquisition(self.mfa, f"({x - self.fixed_x} {y - self.fixed_y} {z - self.fixed_z})", 0, self.point_log_dir)
         if self.robot.type == "DENSO":
             err = self.robot.Energize(1)
 
         def gui():
-            validationText.setText("Point done")
+            self.validationText.append("Point done")
 
         self.executeFunction.emit(gui)
 
@@ -900,7 +921,7 @@ class MainWindow(QMainWindow):
     def disconnect(self):
         self.robot.CloseComm()
         self.canMove = False
-        validationText.setText("Robot Disconnection Done")
+        self.validationText.append("Robot Disconnection Done")
         self.buttonDisconnectRobot.setEnabled(False)
         self.buttonConnectRobot.setEnabled(True)
         if self.robot.type == "DENSO":
@@ -918,16 +939,16 @@ class MainWindow(QMainWindow):
     def validateCoordPt(self):
         if not self.x.text() or not self.y.text() or not self.z.text():  # The result of the .text() method is a string containing the combined text of all matched elements.
             # self.x is Qlineedit class, self.x.text() is its value in string if it is not empty. if it's empty, return false. If certen value, return is True.
-            validationText.setText("At least one of the coordinates is empty")
+            self.validationText.append("At least one of the coordinates is empty")
         else:
             if is_float(self.x.text()) and is_float(self.y.text()) and is_float(
                     self.z.text()):  # The isnumeric() method checks if all the characters in the string are numeric.
                 self.x_ptr = float(self.x.text())  # convert the string value of self.x.text() to int
                 self.y_ptr = float(self.y.text())
                 self.z_ptr = float(self.z.text())
-                validationText.setText("Coordinates Validate")
+                self.validationText.append("Coordinates Validate")
             else:
-                validationText.setText("x, y or z is not a nomber")
+                self.validationText.append("x, y or z is not a nomber")
 
     """
      * @brief Notify a change on the speed slider
@@ -938,7 +959,7 @@ class MainWindow(QMainWindow):
         slider = self.sender()  # self.sender() in a function connected to your button event to get the object that triggered the event.
 
         speed = slider.value()
-        validationText.setText("speed : " + str(speed))  # validationText is defined in line 206
+        self.validationText.append("speed : " + str(speed))  # validationText is defined in line 206
         print("speed : ", speed)  # To show the value in console
 
     """
@@ -962,7 +983,7 @@ class MainWindow(QMainWindow):
     def EmergencyStop(self):
         emergencyStop[0] = True
         self.robot.Energize(0)
-        validationText.setText("Robot Stopped")
+        self.validationText.append("Robot Stopped")
 
     def figureLaunch(self):
         self.getFigureList()[1][self.figureSelector.currentIndex()]()
@@ -990,8 +1011,8 @@ class MainWindow(QMainWindow):
              self.customSemisphere],
             [f"image: url({ASSETS_FOLDER}measure.png)", f"image: url({ASSETS_FOLDER}nfc.jpg)",
              f"image: url({ASSETS_FOLDER}emvco.jpg)", f"image: url({ASSETS_FOLDER}cube.png)",
-             f"image: url({ASSETS_FOLDER}point.png)", f"image: url({ASSETS_FOLDER}point.png)",
-             f"image: url({ASSETS_FOLDER}point.png)"]
+             f"image: url({ASSETS_FOLDER}point.png)", f"image: url({ASSETS_FOLDER}cylindre.png)",
+             f"image: url({ASSETS_FOLDER}semi-sphere.png)"]
         ]
 
     """
@@ -1173,6 +1194,10 @@ class MainWindow(QMainWindow):
         self.robot.SetSpeed(speed)
         self.robot.Move(0, 0, self.distanceMove, 5000)
 
+        _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
+        self.robotHeight = float(_z) - 211.1
+        self.robotHeightLabel.setText(f"Robot height: {self.robotHeight}")
+
         def gui2():
             self.canMove = True
             self.udpdateEnable()
@@ -1227,6 +1252,10 @@ class MainWindow(QMainWindow):
         self.robot.SetSpeed(speed)
         self.robot.Move(0, 0, -self.distanceMove, 5000)
 
+        _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
+        self.robotHeight = float(_z) - 211.1
+        self.robotHeightLabel.setText(f"Robot height: {self.robotHeight}")
+
         def gui2():
             self.canMove = True
             self.udpdateEnable()
@@ -1266,7 +1295,7 @@ class MainWindow(QMainWindow):
         txtCoords = "coords : (x: {}, y: {}, z: {})".format(x, y, z)
 
         def gui():
-            validationText.setText(txtCoords)
+            self.validationText.append(txtCoords)
 
         self.executeFunction.emit(gui)
 
@@ -1279,7 +1308,7 @@ class MainWindow(QMainWindow):
     def fixPoint(self):
         x, y, z, dump = self.robot.GetPosition().split(", ", 3)
         txtCoords = "point fixed : (x: {}, y: {}, z: {})".format(x, y, z)
-        validationText.setText(txtCoords)
+        self.validationText.append(txtCoords)
         print(txtCoords)
         self.fixed_x = float(x)
         self.fixed_y = float(y)
@@ -1348,9 +1377,9 @@ class MainWindow(QMainWindow):
             print(f"CONF : {config}")
             if self.oscilloName == "lecroy":
                 setOscilloscopeParameters(config)
+                self.validationText.append("Oscilloscope Configured")
             if self.oscilloName == "tektronix":
-                self.measurementNumber = self.tektronix.set_parameters(config)
-                print(self.measurementNumber)
+                self.tektronix.set_parameters(config)
 
             self.centralWidget().setEnabled(True)
             self.canMeasure = True
@@ -1395,6 +1424,10 @@ class MainWindow(QMainWindow):
         self.label_radius.setText("Radius :")
         self.label_theta_points.setText("Circle points :")
         self.label_z_points.setText("Layers :")
+
+
+    def fail_box(self, message):
+        QMessageBox.critical(self, "Status", message)
 
 
 if __name__ == '__main__':

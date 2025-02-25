@@ -1,1 +1,0 @@
-Timestamp, x, y, z, CH2_MAXIMUM, CH2_PERIOD, CH2_PK2PK
