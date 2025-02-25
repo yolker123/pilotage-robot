@@ -442,7 +442,7 @@ class MainWindow(QMainWindow):
         grid_ctrl.addWidget(self.buttonOpenPoint, 2, 3)
         # python
         self.robotHeight = 481.1 - 211.1
-        self.robotHeightLabel = QLabel(f"Robot height: {self.robotHeight}")
+        self.robotHeightLabel = QLabel(f"Robot height: {self.robotHeight} (mm) ")
         grid_ctrl.addWidget(self.robotHeightLabel, 6, 0, 1, 3)
         # Define widgets for figure grid
         self.labelFigureSelector = QLabel("Choose Measurement Method :")

@@ -7,7 +7,10 @@
 """
 
 import atexit
-
+from tm_devices.helpers import (
+    DMConfigOptions,
+    SYSTEM_DEFAULT_VISA_BACKEND,
+)
 import datetime
 from datetime import datetime as dt
 import pyvisa
@@ -49,14 +52,26 @@ class Tektronix:
         self.measurement_number = 0
         while self.scope is None:
             try:
-                self.device_manager = DeviceManager(verbose=False)
+                CONFIG_OPTIONS = DMConfigOptions(
+                    setup_cleanup=True,  # update the value for this option, all other options will remain untouched
+                    teardown_cleanup=True,
+                )
+                self.device_manager = DeviceManager(verbose=False, config_options=CONFIG_OPTIONS)
                 atexit.register(self.device_manager.close)
-                self.device_manager.visa_library = PYVISA_PY_BACKEND
-                self.device_manager.setup_cleanup_enabled = False
-                self.device_manager.teardown_cleanup_enabled = False
 
-                scope: MSO6B = self.device_manager.add_scope(OSCILLOSCOPE_IP)
-                print("Connected to:", scope.idn_string)
+                # self.device_manager = DeviceManager(verbose=False)
+                # atexit.register(self.device_manager.close)
+                # self.device_manager.visa_library = PYVISA_PY_BACKEND
+                # self.device_manager.setup_cleanup_enabled = False
+                # self.device_manager.teardown_cleanup_enabled = False
+                #
+                # scope: MSO6B = self.device_manager.add_scope(OSCILLOSCOPE_IP)
+
+                self.device_manager.visa_library = SYSTEM_DEFAULT_VISA_BACKEND
+                # Note: USB and GPIB connections are not supported with PyVISA-py backend
+                scope: MSO6B = self.device_manager.add_scope("USB0::0x0699::0x0530::C071483::INSTR")
+
+                # print("Connected to:", scope.idn_string)
                 self.scope = scope
                 self.main_window.validationText.append("Connected to the oscilloscope Tektronix")
             except Exception as e:
@@ -142,10 +157,10 @@ class Tektronix:
         # Met à jour le nombre total de mesures configurées
         self.measurement_number = len(self.id_map)
 
-        self.main_window.validationText.append(f"Configuration complétée : {self.channel_measurements}")
-        self.main_window.validationText.append(f"Nombre total de mesures : {self.measurement_number}")
-        print("Configuration complétée :", self.channel_measurements)
-        print(f"Nombre total de mesures : {self.measurement_number}")
+        self.main_window.validationText.append(f"Configuration completed : {self.channel_measurements}")
+        self.main_window.validationText.append(f"Total number of measures : {self.measurement_number}")
+        print("Configuration completed :", self.channel_measurements)
+        print(f"Total number of measures : {self.measurement_number}")
 
         # Préparer les en-têtes des fichiers de mesure
         headers = ["Timestamp","X","Y","Z"]  # Les en-têtes fixes

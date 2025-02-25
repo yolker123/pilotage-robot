@@ -624,7 +624,7 @@ class GraphicsTab(QWidget):
 
 
         # Sélecteur de valeur
-        value_label = QLabel("Coordonnée X::")
+        value_label = QLabel("Coordonnée X:")
         value_selector = QComboBox()
         value_selector.currentTextChanged.connect(value_callback)
         value_selector.setMinimumWidth(75)  # Ajustez la largeur minimale si nécessaire
@@ -632,11 +632,11 @@ class GraphicsTab(QWidget):
         # Update the value_label text based on selected plane
         def update_value_label(plane_text):
             if plane_text == 'XY':
-                value_label.setText("Coordonnée Z:")
+                value_label.setText("Coordonnée Z (mm) :")
             elif plane_text == 'XZ':
-                value_label.setText("Coordonnée Y:")
+                value_label.setText("Coordonnée Y (mm):")
             elif plane_text == 'YZ':
-                value_label.setText("Coordonnée X:")
+                value_label.setText("Coordonnée X (mm):")
 
         plane_selector.currentTextChanged.connect(update_value_label)
 
