@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
 
         current_time = datetime.datetime.now()
         # emplacement des acquisitions pour la figure One Point
-        self.point_log_dir = f"logAcquisition/points_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        self.point_log_dir = f"logAcquisition_lecroy/points_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
 
         # prédicat pour savoir si le robot peut bouger
         self.canMove = False
@@ -629,15 +629,18 @@ class MainWindow(QMainWindow):
             self.buttonSetupOscilloscope.setEnabled(True)
         if self.buttonTektronix.isEnabled() and not self.buttonLecroy.isEnabled():
             self.tektronix.remove_device()
-            rm = oscilloscopeConnection(
-                idOscilloscope)  # oscilloscopeConnection is a function in oscilloscopeAcquisition
-            # display the action on the specific Text Boxt
-            self.validationText.append(
-                "Oscilloscope Lecroy Connection to: " + str(rm.list_resources()))  # settext is to write text in validationText
+            try:
+                rm = oscilloscopeConnection(
+                    idOscilloscope)  # oscilloscopeConnection is a function in oscilloscopeAcquisition
+                self.validationText.append(
+                    "Oscilloscope Lecroy Connection to: " + str(rm.list_resources()))  # settext is to write text in validationText
 
-            # variable set to true in order to enable the setupOscilloscope fonction
-            self.buttonSetupOscilloscope.setEnabled(True)
-            self.buttonConnectOscilloscope.setEnabled(False)
+                # variable set to true in order to enable the setupOscilloscope fonction
+                self.buttonSetupOscilloscope.setEnabled(True)
+                self.buttonConnectOscilloscope.setEnabled(False)
+            except:
+                self.validationText.append("Oscilloscope Tektronix Connection failed")
+                self.fail_box("Oscilloscope Tektronix Connection failed")
 
     """
      * @brief Launch the measureOscillo function of the oscilloscope
@@ -646,7 +649,7 @@ class MainWindow(QMainWindow):
     def MeasureOscillo(self):
         if self.oscilloName == "lecroy":
             current_time = datetime.datetime.now()
-            log_dir = f"logAcquisition/measure_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+            log_dir = f"logAcquisition_lecroy/measure_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
             getAcquisition(self.mfa, "(0 0 0)", 0, log_dir)
             self.validationText.append("Autosetup Done")
         if self.oscilloName == "tektronix":
@@ -684,7 +687,7 @@ class MainWindow(QMainWindow):
     @asynchrone
     def nfc(self):
         current_time = datetime.datetime.now()
-        log_dir = f"logAcquisition/nfc_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"  # directory of the figure
+        log_dir = f"logAcquisition_lecroy/nfc_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"  # directory of the figure
 
         # display the action on the specific Text Box
         def gui1():
@@ -719,7 +722,7 @@ class MainWindow(QMainWindow):
     @asynchrone
     def emvco(self):
         current_time = datetime.datetime.now()
-        log_dir = f"logAcquisition/emvco_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        log_dir = f"logAcquisition_lecroy/emvco_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
 
         # display the action on the specific Text Box
         def gui1():
@@ -754,7 +757,7 @@ class MainWindow(QMainWindow):
     def customCube(self):
         ready = False
         current_time = datetime.datetime.now()
-        log_dir = f"logAcquisition/cutomcube_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        log_dir = f"logAcquisition_lecroy/cutomcube_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
         dataset = []
         x = self.x_ptr
         y = self.y_ptr
@@ -812,7 +815,7 @@ class MainWindow(QMainWindow):
     def customCylindre(self):
         ready = False
         current_time = datetime.datetime.now()
-        log_dir = f"logAcquisition/cutomcylindre_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        log_dir = f"logAcquisition_lecroy/cutomcylindre_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
         dataset = []
         x = self.x_ptr
         y = self.y_ptr
@@ -856,7 +859,7 @@ class MainWindow(QMainWindow):
     def customSemisphere(self):
         ready = False
         current_time = datetime.datetime.now()
-        log_dir = f"logAcquisition/cutomSemisphere_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        log_dir = f"logAcquisition_lecroy/cutomSemisphere_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
         dataset = []
         x = self.x_ptr
         y = self.y_ptr
@@ -1316,7 +1319,7 @@ class MainWindow(QMainWindow):
         self.fixed_y = float(y)
         self.fixed_z = float(z)
         current_time = datetime.datetime.now()
-        self.point_log_dir = f"logAcquisition/points_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        self.point_log_dir = f"logAcquisition_lecroy/points_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
 
     """
      * @brief permet à l'utilisateur d'enregistrer la position du robot dans un fichier

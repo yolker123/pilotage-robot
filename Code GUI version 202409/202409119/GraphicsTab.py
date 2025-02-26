@@ -188,13 +188,20 @@ class GraphicsTab(QWidget):
         """
         Met à jour tous les graphiques de chaque onglet.
         """
-        self.update_tab_2d_plane()  # Mettre à jour les graphiques 2D
-        self.update_tab_gaussian_and_radial()  # Mettre à jour les graphiques 3D
-        self.plot_3d_vectors()  # Mettre à jour les vecteurs 3D
+        # Premièrement, on s'assure que les sélecteurs affichent les dernières valeurs disponibles
         self.update_plane_selector_2d_values()
         self.update_plane_selector_3d_values()
-        self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
-        self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
+
+        # Emission manuelle du signal de changement pour forcer la mise à jour
+        if self.plane_selector_2d.count() > 0:
+            self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
+        if self.plane_selector_3d.count() > 0:
+            self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
+
+        # Puis on met à jour les graphiques
+        self.update_tab_2d_plane()
+        self.update_tab_gaussian_and_radial()
+        self.plot_3d_vectors()
 
     def clear_all_graphs(self):
         """
@@ -202,6 +209,14 @@ class GraphicsTab(QWidget):
         """
         self.simulation.points_haute_resolution = []
         self.simulation.measuredPoints = []
+        self.label_file_path.setText("")
+        self.update_all_graphs()
+
+    def clear_interpolated_points(self):
+        """
+        Efface tous les points interpolés et réinitialise les graphiques.
+        """
+        self.simulation.points_haute_resolution = []
         self.label_file_path.setText("")
         self.update_all_graphs()
 
@@ -376,10 +391,11 @@ class GraphicsTab(QWidget):
                 min_val,
                 max_val
             )
-        self.clear_all_graphs()
+        # self.clear_all_graphs()
         # for p in filtered_points:
         #     print(p)
         self.simulation.points_haute_resolution = filtered_points
+
         self.update_all_graphs()
 
     def filter_vector_points(self, points, filter_type, min_val=None, max_val=None):
@@ -421,7 +437,7 @@ class GraphicsTab(QWidget):
         for point in self.simulation.points_haute_resolution:
             point["display"] = True
         tmp = self.simulation.points_haute_resolution
-        self.clear_all_graphs()
+        self.clear_interpolated_points()
         self.simulation.points_haute_resolution = tmp
         self.update_all_graphs()
 
@@ -440,7 +456,7 @@ class GraphicsTab(QWidget):
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d, normalize=self.normalize_button_3D.isChecked())
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d+1, normalize=self.normalize_button_3D.isChecked())
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
             if point["display"]:

@@ -103,7 +103,7 @@ class MagneticFieldCalculation:
         self.measuredPoints.append({
             'x': x, 'y': y, 'z': z,
             'Hx': Hx, 'Hy': Hy, 'Hz': Hz,
-            'display' : True
+            'display': True
         })
         H = np.linalg.norm([Hx, Hy, Hz])
         print(f"Résultat ajouté : {H} pour x={x}, y={y}, z={z}")

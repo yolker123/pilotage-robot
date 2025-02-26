@@ -250,7 +250,9 @@ class Tektronix:
         """
         # Ouvrir le fichier pour écrire l'en-tête
         self.current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
-        self.filename = os.path.join(pwd, "Measure", f"{form}_{self.current_time_str}_{hauteur}.csv")
+        if not os.path.exists(os.path.join(pwd, "Measures_tektronix")):
+            os.makedirs(os.path.join(pwd, "Measures_tektronix"))
+        self.filename = os.path.join(pwd, "Measures_tektronix", f"{form}_{self.current_time_str}_{hauteur}.csv")
         with open(self.filename, 'w') as f:
             f.write(self.header_line)
 
