@@ -1067,7 +1067,8 @@ class GraphicsTab(QWidget):
 
     def filter_points(self, plane, value, epsilon=1e-5):
         """Filtre les points selon le plan et la valeur donnée."""
-        return [p for p in self.simulation.points_haute_resolution if abs(p[plane] - value) < epsilon]
+        points = [p for p in self.simulation.points_haute_resolution if abs(p[plane] - value) < epsilon]
+        return [ p for p in points if p["display"]]
 
     def prepare_plot_data(self, filtered_points, plane):
         """Prépare les données de tracé pour les graphiques 2D en fonction de la normalisation."""
