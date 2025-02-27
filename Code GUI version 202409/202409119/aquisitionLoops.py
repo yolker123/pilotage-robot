@@ -92,7 +92,7 @@ class Point:
                     'x': x, 'y': y, 'z': z,
                     'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display': True
                 })
-                mfa.update_all_graphs()
+                mfa.update_all_graphs(False)
         print("aquired")
 
 
@@ -115,8 +115,8 @@ def Acquire_points(points, robot, mfa, form, x_ptr=None, y_ptr=None, z_ptr=None,
         tektronix.create_file(z_ptr_reel, form)
         tektronix.scope.write("FPANEL:PRESS AUTOset")
     for point in points:
-
         point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix)
+    mfa.update_all_graphs()
     if oscilloName == "tektronix":
         base_waveform_path = "C:/Users/Public/Tektronix/TekScope/WaveForm/"
         base_screenshot_path = "C:/Users/Public/Tektronix/TekScope/Screenshots/"

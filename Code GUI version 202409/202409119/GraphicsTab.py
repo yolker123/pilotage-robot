@@ -184,23 +184,24 @@ class GraphicsTab(QWidget):
         except ValueError:
             print("Veuillez entrer un nombre entier valide.")
 
-    def update_all_graphs(self):
+    def update_all_graphs(self, all=True):
         """
         Met à jour tous les graphiques de chaque onglet.
         """
-        # Premièrement, on s'assure que les sélecteurs affichent les dernières valeurs disponibles
-        self.update_plane_selector_2d_values()
-        self.update_plane_selector_3d_values()
+        if all:
+            # Premièrement, on s'assure que les sélecteurs affichent les dernières valeurs disponibles
+            self.update_plane_selector_2d_values()
+            self.update_plane_selector_3d_values()
 
-        # Emission manuelle du signal de changement pour forcer la mise à jour
-        if self.plane_selector_2d.count() > 0:
-            self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
-        if self.plane_selector_3d.count() > 0:
-            self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
+            # Emission manuelle du signal de changement pour forcer la mise à jour
+            if self.plane_selector_2d.count() > 0:
+                self.plane_selector_2d.currentTextChanged.emit(self.plane_selector_2d.currentText())
+            if self.plane_selector_3d.count() > 0:
+                self.plane_selector_3d.currentTextChanged.emit(self.plane_selector_3d.currentText())
 
-        # Puis on met à jour les graphiques
-        self.update_tab_2d_plane()
-        self.update_tab_gaussian_and_radial()
+            # Puis on met à jour les graphiques
+            self.update_tab_2d_plane()
+            self.update_tab_gaussian_and_radial()
         self.plot_3d_vectors()
 
     def clear_all_graphs(self):

@@ -209,7 +209,7 @@ def captureMeasures(conf, mfa, current_time, instant, acquisition_directory, nom
                     'x': x, 'y': y, 'z': z,
                     'Hx': Hx, 'Hy': Hy, 'Hz': Hz, 'display': True
                 })
-                mfa.update_all_graphs()
+                mfa.update_all_graphs(False)
         writer.writerow(row1)
         writer.writerow(row2)
 
