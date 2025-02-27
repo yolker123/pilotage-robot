@@ -22,6 +22,7 @@ from scipy.interpolate import griddata
 
 from MagneticFieldCalculation import MagneticFieldCalculation
 import math
+from latex_to_pixmap import render_latex_to_pixmap, create_vector_display, update_vector_display
 
 
 class GraphicsTab(QWidget):
@@ -670,7 +671,7 @@ class GraphicsTab(QWidget):
                         ax = point['Hx'] * mu_0 * s * omega
                         ay = point['Hy'] * mu_0 * s * omega
                         az = point['Hz'] * mu_0 * s * omega
-                        file.write(f"{point['x']},{point['y']},{point['z']},{ax},{ay},{az},{point['Hx']},{pointac['Hy']},{point['Hz']}\n")
+                        file.write(f"{point['x']},{point['y']},{point['z']},{ax},{ay},{az},{point['Hx']},{point['Hy']},{point['Hz']}\n")
             except Exception as e:
                 print(f"Error saving file: {e}")
 
@@ -709,8 +710,19 @@ class GraphicsTab(QWidget):
         selector_layout.addWidget(value_label, alignment=Qt.AlignLeft)
         selector_layout.addWidget(value_selector, alignment=Qt.AlignLeft)
 
-        return selector_layout, plane_selector, value_selector, plane_label
+        tab_type = '2d'
+        if value_callback == self.update_tab_gaussian_and_radial:
+            tab_type = '3d'
+        # Ajoutez l'affichage des vecteurs au layout
+        vector_widget = create_vector_display(self, tab_type)
+        selector_layout.addWidget(vector_widget, alignment=Qt.AlignRight)
+        selector_layout.addStretch(1)  # Pour pousser l'affichage des vecteurs vers la droite
 
+        # Connecter correctement le signal pour mettre à jour l'affichage des vecteurs
+        plane_selector.currentTextChanged.connect(
+            lambda plane_text: update_vector_display(self, plane_text, tab_type)
+        )
+        return selector_layout, plane_selector, value_selector, plane_label
     def update_plane_selector_2d_values(self):
         """Met à jour les valeurs disponibles dans le sélecteur pour l'onglet 2D."""
         self.update_plane_selector_values(self.value_selector_2d, self.plane_selector_2d.currentText())
