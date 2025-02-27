@@ -780,51 +780,33 @@ class GraphicsTab(QWidget):
             return
 
         filtered_points = self.filter_points(axe, value)
-        if not filtered_points or len(filtered_points) < 3:  # Ensure enough points for a plane
+        if not filtered_points or len(filtered_points) < 2:
             print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
-        coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(filtered_points, axe)
+        coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(
+            filtered_points, axe)
 
-        # If there are not enough points to interpolate smoothly, do a scatter plot
-        if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
-            print("Insufficient unique points for grid interpolation; using scatter plot.")
-            self.figure_2d.clear()
-            ax = self.figure_2d.add_subplot(111)
-            scatter = ax.scatter(coord1, coord2, c=H_total, cmap='viridis', edgecolor='k')
-            ax.quiver(coord1, coord2, H_component1_norm, H_component2_norm, color='red', scale=self.vector_scale_2d)
-            ax.set_title(f"Points on plane {axe}")
-            if axe == "x":
-                ax.set_xlabel(f'Y (mm)')
-                ax.set_ylabel(f'Z (mm)')
-            if axe == "y":
-                ax.set_xlabel(f'X (mm)')
-                ax.set_ylabel(f'Z (mm)')
-            if axe == "z":
-                ax.set_xlabel(f'X (mm)')
-                ax.set_ylabel(f'Y (mm)')
-            ax.set_ylabel('Other axis (mm)')  # Change accordingly
-            self.figure_2d.colorbar(scatter, ax=ax, label='|H| (A/m)')
-            self.canvas_2d.draw()
-            return
-
-        # Proceed as usual if data is sufficient
-        coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
-        H_total_grid = griddata((coord1, coord2), H_total,
-                                (coord1_grid, coord2_grid), method="linear", fill_value=0)
-        H_component1_base_grid = griddata((coord1, coord2), H_component1_base,
-                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
-        H_component2_base_grid = griddata((coord1, coord2), H_component2_base,
-                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm,
-                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm,
-                                          (coord1_grid, coord2_grid), method="linear", fill_value=0)
-
+        # Création de la figure
         self.figure_2d.clear()
         gs = self.figure_2d.add_gridspec(1, 3, width_ratios=[6, 0.4, 6])
+
+        # Premier graphique (norme du champ)
         ax1 = self.figure_2d.add_subplot(gs[0, 0])
-        contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
+
+        # Gestion du cas où les points sont alignés
+        if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
+            print("Points alignés sur une ligne - utilisation d'un scatter plot")
+            scatter = ax1.scatter(coord1, coord2, c=H_total, cmap='viridis', s=50, edgecolor='k')
+            colorbar = self.figure_2d.colorbar(scatter, cax=self.figure_2d.add_subplot(gs[0, 1]), label="|H| (A/m)")
+        else:
+            # Utilisation de l'interpolation pour des données 2D complètes
+            coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
+            H_total_grid = griddata((coord1, coord2), H_total,
+                                    (coord1_grid, coord2_grid), method="linear", fill_value=0)
+            contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
+            colorbar = self.figure_2d.colorbar(contour, cax=self.figure_2d.add_subplot(gs[0, 1]), label="|H| (A/m)")
+
         ax1.set_title(f"Norme du champ |H| ({axe})")
         if axe == "x":
             ax1.set_xlabel(f'Y (mm)')
@@ -835,14 +817,13 @@ class GraphicsTab(QWidget):
         if axe == "z":
             ax1.set_xlabel(f'X (mm)')
             ax1.set_ylabel(f'Y (mm)')
-        cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
-        self.figure_2d.colorbar(contour, cax=cbar_ax, label="|H| (A/m)")
-        self.ax2 = self.figure_2d.add_subplot(gs[0, 2])
 
-        # Draw only the quiver with vectors and no points.
-        self.ax2.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid,
-                          color="red", scale=self.vector_scale_2d)
+        # Deuxième graphique (vecteurs)
+        self.ax2 = self.figure_2d.add_subplot(gs[0, 2])
+        quiver = self.ax2.quiver(coord1, coord2, H_component1_norm, H_component2_norm,
+                                 color="red", scale=self.vector_scale_2d)
         self.ax2.set_title(f"Magnetic Field Direction on plane {axe}")
+
         if axe == "x":
             self.ax2.set_xlabel(f'Y (mm)')
             self.ax2.set_ylabel(f'Z (mm)')
@@ -853,21 +834,21 @@ class GraphicsTab(QWidget):
             self.ax2.set_xlabel(f'X (mm)')
             self.ax2.set_ylabel(f'Y (mm)')
 
-        self.ax2.set_aspect("equal")
+        # Ajustement des limites pour le deuxième graphique
+        self._adjust_limits_for_square(self.ax2, coord1, coord2)
+
+        # Ajustement de la position
         pos = self.ax2.get_position()
-        # Décaler ax2 vers la droite permet d'augmenter visuellement l'espace entre la légende et ce graphique,
-        # tout en gardant un écart réduit entre le premier graphique et la légende.
-        new_pos = [pos.x0 + 0.05, pos.y0, pos.width, pos.height]  # Valeur ajustable selon le besoin
+        new_pos = [pos.x0 + 0.05, pos.y0, pos.width, pos.height]
         self.ax2.set_position(new_pos)
 
-        # Store vector base positions and components for interactivity.
-
-        self.vector_bases = np.array([coord1_grid.flatten(), coord2_grid.flatten()]).T
-        self.vector_hcb1 = H_component1_base_grid.flatten()
-        self.vector_hcb2 = H_component2_base_grid.flatten()
-        self.vector_hcn1 = H_component1_norm_grid.flatten()
-        self.vector_hcn2 = H_component2_norm_grid.flatten()
-        self.vector_ht = H_total_grid.flatten()
+        # Store vector base positions and components for interactivity using original data
+        self.vector_bases = np.array([coord1, coord2]).T
+        self.vector_hcb1 = H_component1_base
+        self.vector_hcb2 = H_component2_base
+        self.vector_hcn1 = H_component1_norm
+        self.vector_hcn2 = H_component2_norm
+        self.vector_ht = H_total
 
         # Create the annotation once.
         self.annotation = self.ax2.annotate(
@@ -883,6 +864,153 @@ class GraphicsTab(QWidget):
         # Initialize interactivity for ax2
         self.init_interactivity(self.ax2, self.canvas_2d)
 
+    def update_tab_gaussian_and_radial(self):
+        """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
+        plane = self.plane_selector_3d.currentText()
+        if plane == "XY":
+            axe = "z"
+        if plane == "XZ":
+            axe = "y"
+        if plane == "YZ":
+            axe = "x"
+        if self.value_selector_3d.count() == 0:
+            return
+
+        try:
+            value = float(self.value_selector_3d.currentText())
+        except ValueError:
+            return
+
+        filtered_points = self.filter_points(axe, value)
+        if not filtered_points or len(filtered_points) < 2:
+            print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
+            return
+
+        coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(
+            filtered_points, axe)
+
+        # Création de la figure
+        self.figure_gaussian.clear()
+        gs = self.figure_gaussian.add_gridspec(1, 2, width_ratios=[1, 1])
+
+        # Premier graphique (surface 3D ou scatter 3D)
+        ax1 = self.figure_gaussian.add_subplot(gs[0, 0], projection='3d')
+
+        # Gestion du cas où les points sont alignés
+        if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
+            print("Points alignés sur une ligne - utilisation d'un scatter plot 3D")
+            scatter3d = ax1.scatter(coord1, coord2, H_total, c=H_total, cmap='viridis', s=50, edgecolor='k', alpha=0.8)
+            self.figure_gaussian.colorbar(scatter3d, ax=ax1, shrink=0.5, aspect=10, label="|H| (A/m)")
+        else:
+            # Utilisation de l'interpolation pour des données 2D complètes
+            coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
+            H_total_grid = griddata((coord1, coord2), H_total,
+                                    (coord1_grid, coord2_grid), method='linear', fill_value=0)
+            surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
+            self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10, label="|H| (A/m)")
+
+        ax1.set_title(f'Amplitude du champ magnétique |H| ({axe})')
+        if axe == "x":
+            ax1.set_xlabel(f'Y (mm)')
+            ax1.set_ylabel(f'Z (mm)')
+        if axe == "y":
+            ax1.set_xlabel(f'X (mm)')
+            ax1.set_ylabel(f'Z (mm)')
+        if axe == "z":
+            ax1.set_xlabel(f'X (mm)')
+            ax1.set_ylabel(f'Y (mm)')
+        ax1.set_zlabel('Amplitude |H| (A/m)')
+
+        # Deuxième graphique (vecteurs)
+        self.ax_gaussian = self.figure_gaussian.add_subplot(gs[0, 1])
+        quiver = self.ax_gaussian.quiver(coord1, coord2, H_component1_norm, H_component2_norm,
+                                         scale=self.vector_scale_2d)
+        self.ax_gaussian.set_title(f"Champ vectoriel sur le plan {axe}")
+        if axe == "x":
+            self.ax_gaussian.set_xlabel(f'Y (mm)')
+            self.ax_gaussian.set_ylabel(f'Z (mm)')
+        if axe == "y":
+            self.ax_gaussian.set_xlabel(f'X (mm)')
+            self.ax_gaussian.set_ylabel(f'Z (mm)')
+        if axe == "z":
+            self.ax_gaussian.set_xlabel(f'X (mm)')
+            self.ax_gaussian.set_ylabel(f'Y (mm)')
+
+        # Ajustement des limites pour le graphique vectoriel
+        self._adjust_limits_for_square(self.ax_gaussian, coord1, coord2)
+
+        # Store vector base positions and components for interactivity using original data
+        self.gaussian_vector_bases = np.array([coord1, coord2]).T
+        self.gaussian_vector_hcb1 = H_component1_base
+        self.gaussian_vector_hcb2 = H_component2_base
+        self.gaussian_vector_hcn1 = H_component1_norm
+        self.gaussian_vector_hcn2 = H_component2_norm
+        self.gaussian_vector_ht = H_total
+
+        # Create the annotation once.
+        self.gaussian_annotation = self.ax_gaussian.annotate(
+            text="",
+            xy=(0, 0),
+            xytext=(6, 15),
+            textcoords="offset points",
+            bbox={"boxstyle": "round", "fc": "w"},
+            arrowprops={"arrowstyle": "->"}
+        )
+        self.gaussian_annotation.set_visible(False)
+
+        # Initialize interactivity for ax_gaussian
+        self.init_interactivity(self.ax_gaussian, self.canvas_gaussian)
+
+    def _adjust_limits_for_square(self, ax, coord1, coord2):
+        """
+        Ajuste les limites d'un axe pour maintenir un graphique carré
+        même lorsque les données sont sur une ligne, avec une marge autour.
+        """
+        # Utiliser 'auto' pour que matplotlib calcule les bonnes limites
+        ax.set_aspect('auto')
+
+        # Calculer les limites des données
+        min_x, max_x = min(coord1), max(coord1)
+        min_y, max_y = min(coord2), max(coord2)
+
+        # Calculer l'étendue des données
+        x_range = max_x - min_x
+        y_range = max_y - min_y
+
+        # Définir une marge (pourcentage de l'étendue des données)
+        margin_percent = 0.15  # 15% de marge
+
+        # Si l'étendue est trop petite, l'ajuster pour éviter une forme trop étroite
+        min_range = 1.0  # Valeur minimale d'étendue d'axe
+
+        # Appliquer la marge à l'axe X
+        if x_range < min_range:
+            center_x = (min_x + max_x) / 2
+            half_range = min_range / 2
+            min_x = center_x - half_range
+            max_x = center_x + half_range
+        else:
+            margin_x = x_range * margin_percent
+            min_x -= margin_x
+            max_x += margin_x
+
+        # Appliquer la marge à l'axe Y
+        if y_range < min_range:
+            center_y = (min_y + max_y) / 2
+            half_range = min_range / 2
+            min_y = center_y - half_range
+            max_y = center_y + half_range
+        else:
+            margin_y = y_range * margin_percent
+            min_y -= margin_y
+            max_y += margin_y
+
+        # Définir les limites des axes avec les marges
+        ax.set_xlim(min_x, max_x)
+        ax.set_ylim(min_y, max_y)
+
+        # Assurer que le graphique est visuellement carré
+        ax.set_box_aspect(1.0)
 
     def update_tab_gaussian_and_radial(self):
         """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
