@@ -11,7 +11,7 @@ import numpy as np
 import math
 
 class MagneticFieldCalculation:
-    def __init__(self, resolution=3, R=0.01):
+    def __init__(self, S=0.01, resolution=3):
         """
         Initialise les paramètres physiques et les variables pour le calcul du champ magnétique.
 
@@ -23,7 +23,7 @@ class MagneticFieldCalculation:
         self.F = 13.56e6  # Fréquence en Hz
         self.omega = 2 * math.pi * self.F  # Pulsation angulaire en rad/s
         self.k = self.omega / self.c  # Nombre d'onde en rad/m
-        self.S = math.pi * R ** 2
+        self.S = S
         self.resolution = resolution
         self.mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
 
@@ -32,6 +32,14 @@ class MagneticFieldCalculation:
         self.points_haute_resolution = []
         self.hRobot = 0 # Hauteur du robot
 
+    def update_surface_antenna(self, S):
+        """
+        Met à jour la longueur de l'antenne pour le calcul de la surface.
+
+        Parameters:
+        length_antenna (float): Longueur de l'antenne.
+        """
+        self.S = S
 
     def read_file_and_calculate_point(self, line, columns):
         """

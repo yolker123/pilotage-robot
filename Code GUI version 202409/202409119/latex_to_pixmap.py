@@ -85,11 +85,11 @@ def update_vector_display(window, plane, tab_type='2d'):
         tab_type (str): Le type d'onglet ('2d' ou '3d')
     """
     if plane == 'XY':
-        latex_formula = r"$\vec{H}_x + \vec{H}_y$"
+        latex_formula = r"$\vec{H}_{plane} = \vec{H}_x + \vec{H}_y$"
     elif plane == 'XZ':
-        latex_formula = r"$\vec{H}_x + \vec{H}_z$"
+        latex_formula = r"$\vec{H}_{plane} = \vec{H}_x + \vec{H}_z$"
     elif plane == 'YZ':
-        latex_formula = r"$\vec{H}_y + \vec{H}_z$"
+        latex_formula = r"$\vec{H}_{plane} = \vec{H}_y + \vec{H}_z$"
     else:
         latex_formula = r""
 

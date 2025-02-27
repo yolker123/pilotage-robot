@@ -181,8 +181,7 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget()
         tabs.addTab(centralArea, "Mesures")
-        self.mfa = GraphicsTab()
-        tabs.addTab(self.mfa, "Algo")
+
 
         self.setCentralWidget(tabs)  # The defaut value of centralArea is set in self.resize(1200, 800)
 
@@ -347,6 +346,48 @@ class MainWindow(QMainWindow):
         delay_widget = QWidget()
         delay_widget.setLayout(delay_layout)
 
+        self.surface_antenna = 0.0001
+        self.mfa = GraphicsTab(self)
+        tabs.addTab(self.mfa, "Algo")
+
+        # Add a delay configuration row
+        self.labelDelay = QLabel("Delay between measurements (in s):")
+        self.inputDelay = QLineEdit()
+        self.inputDelay.setFixedWidth(60)  # Make the input field reasonably sized
+        self.buttonValidateDelay = QPushButton("Validate")
+        self.labelDelayValue = QLabel("1")  # Default value
+        self.delay_seconds = 1
+
+        # Create a horizontal layout for the delay components
+        delay_layout = QHBoxLayout()
+        delay_layout.addWidget(self.labelDelay)
+        delay_layout.addWidget(self.inputDelay)
+        delay_layout.addWidget(self.buttonValidateDelay)
+        delay_layout.addWidget(QLabel("Current delay:"))
+        delay_layout.addWidget(self.labelDelayValue)
+        delay_layout.addStretch(1)  # Push everything to the left
+
+        self.labelAntenna = QLabel("Surface of the antenna (in m²):")
+        self.inputAntenna = QLineEdit()
+        self.inputAntenna.setFixedWidth(60)  # Make the input field reasonably sized
+        self.buttonValidateAntenna = QPushButton("Validate")
+        self.labelAntennaValue = QLabel("0.0001")  # Default value
+
+        antenna_layout = QHBoxLayout()
+        antenna_layout.addWidget(self.labelAntenna)
+        antenna_layout.addWidget(self.inputAntenna)
+        antenna_layout.addWidget(self.buttonValidateAntenna)
+        antenna_layout.addWidget(QLabel("Current antenna surface:"))
+        antenna_layout.addWidget(self.labelAntennaValue)
+        antenna_layout.addStretch(1)  # Push everything to the left
+
+        # Create a widget to hold this layout
+        delay_widget = QWidget()
+        delay_widget.setLayout(delay_layout)
+
+        antenna_widget = QWidget()
+        antenna_widget.setLayout(antenna_layout)
+
         grid_btn = QGridLayout()  # creat gridlayout named grid_btn
 
         grid_btn.addWidget(self.buttonConnectOscilloscope, 0, 0)
@@ -354,11 +395,20 @@ class MainWindow(QMainWindow):
         grid_btn.addWidget(self.buttonConnectRobot, 2, 0)
         grid_btn.addWidget(self.buttonHomePosition, 3, 0)
         grid_btn.addWidget(self.buttonDisconnectRobot, 4, 0)
-
         grid_btn.addWidget(delay_widget, 5, 0)
-        self.buttonValidateDelay.clicked.connect(self.validateDelay)
+        grid_btn.addWidget(antenna_widget, 6, 0)
+        self.buttonValidateDelay.clicked.connect(
+            lambda: self.validateInput(self.inputDelay, self.labelDelayValue, "delay_seconds", "seconds", self.mfa)
+        )
+        self.buttonValidateAntenna.clicked.connect(
+            lambda: self.validateInput(self.inputAntenna, self.labelAntennaValue, "surface_antenna", "meters", self.mfa)
+        )
+        grid_btn.addWidget(delay_widget, 5, 0)
 
         btn_widget.setLayout(grid_btn)  # display the buttons by putting grid_btn gridlayout to btn_widget widget
+
+
+
 
         # ------------------------Control widget----------------------
         self.ctrl_widget = QWidget(bottom_widget)
@@ -468,7 +518,7 @@ class MainWindow(QMainWindow):
         grid_ctrl.addWidget(self.buttonOpenPoint, 2, 3)
         # python
         self.robotHeight = 481.1 - 211.1
-        self.robotHeightLabel = QLabel(f"Robot height: {round(self.robotHeight,2)} (mm) ")
+        self.robotHeightLabel = QLabel("Robot height (mm) : {:.2f}".format(float(self.robotHeight)))
         grid_ctrl.addWidget(self.robotHeightLabel, 6, 0, 1, 3)
         # Define widgets for figure grid
         self.labelFigureSelector = QLabel("Choose Measurement Method :")
@@ -601,6 +651,35 @@ class MainWindow(QMainWindow):
         STOP_widget.setLayout(STOP_grid)
         self.udpdateEnable()  # udpdateEnable() is a class defined in line 929
 
+    def validateInput(self, input_field, label, attribute_name, unit_name, mfa):
+        """Generic method to validate and update numeric inputs.
+
+        Args:
+            input_field: The QLineEdit containing the input value
+            label: The QLabel to update with the validated value
+            attribute_name: Name of the instance attribute to store the value
+            unit_name: Name of the unit for logging (e.g., "seconds", "meters")
+        """
+        try:
+            # Get the value from the input field and convert to float
+            value = float(input_field.text())
+            if value == 0:
+                self.fail_box("0 is not allowed !")
+            # Update the displayed value
+            label.setText(f"{value}")
+
+            self.surface_antenna = value
+            # Store as an instance variable
+            setattr(self, attribute_name, value)
+
+            print(f"Set {attribute_name} to {value} {unit_name}")
+
+            mfa.simulation.update_surface_antenna(self.surface_antenna)
+        except ValueError:
+            # Handle invalid input
+            label.setText("Invalid")
+            print(f"Please enter a valid number for {attribute_name}")
+
 
     # ------ MOCHE ---------
     def lecroy(self):
@@ -671,13 +750,25 @@ class MainWindow(QMainWindow):
     """
 
     def MeasureOscillo(self):
+        dataset = [Point(f"(0 0 0)", 0, 0,0, 0, 90, 0, self.delay_seconds)]
         if self.oscilloName == "lecroy":
             current_time = datetime.datetime.now()
             log_dir = f"logAcquisition_lecroy/measure_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"
             getAcquisition(self.mfa, "(0 0 0)", 0, log_dir)
             self.validationText.append("Autosetup Done")
         if self.oscilloName == "tektronix":
-            tektronix.tektronix_get_measures(self.scope, self.measurementNumber)
+            _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
+            x = float(_x)
+            y = float(_y)
+            z = float(_z)
+            dataset = [Point(f"({x} {y} {z})", x, y, z, 0, 90, 0, self.delay_seconds)]
+            if self.oscilloName == 'tektronix':
+                print("point tektronix")
+                Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds, "ManualMeasure", x, y, z, "",
+                               self.oscilloName, self.tektronix)
+            def gui():
+                self.validationText.append("Point done")
+            self.executeFunction.emit(gui)
 
     """
      * @brief Initialize the Robot position 
@@ -730,7 +821,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, self.delay_second, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -766,7 +857,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -820,7 +911,7 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
 
-        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"cube", x, y, z, log_dir, self.oscilloName,  self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds,"cube", x, y, z, log_dir, self.oscilloName,  self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -874,7 +965,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -919,7 +1010,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -940,9 +1031,14 @@ class MainWindow(QMainWindow):
         x = float(_x)
         y = float(_y)
         z = float(_z)
+        dataset = [Point(f"({x} {y} {z})", x, y, z, 0, 90, 0, self.delay_seconds)]
         if self.robot.type == "DENSO":
             err = self.robot.Energize(0)
-        getAcquisition(self.mfa, f"({x - self.fixed_x} {y - self.fixed_y} {z - self.fixed_z})", 0, self.point_log_dir)
+        if self.oscilloName == 'lecroy':
+            getAcquisition(self.mfa, f"({x - self.fixed_x} {y - self.fixed_y} {z - self.fixed_z})", 0, self.point_log_dir)
+        elif self.oscilloName == 'tektronix':
+            print("point tektronix")
+            Acquire_points(dataset, self.robot, self.mfa, self.delay_seconds, "OnePoint", x, y, z, "", self.oscilloName, self.tektronix)
         if self.robot.type == "DENSO":
             err = self.robot.Energize(1)
 
@@ -1232,8 +1328,8 @@ class MainWindow(QMainWindow):
         self.robot.Move(0, 0, self.distanceMove, 5000)
 
         _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
-        self.robotHeight = float(_z) - 211.1
-        self.robotHeightLabel.setText(f"Robot height: {self.robotHeight}")
+        self.robotHeight = float(_z) - 10
+        self.robotHeightLabel.setText(f"Robot height (mm) : {float(self.robotHeight):.2f}")
 
         def gui2():
             self.canMove = True
@@ -1290,8 +1386,8 @@ class MainWindow(QMainWindow):
         self.robot.Move(0, 0, -self.distanceMove, 5000)
 
         _x, _y, _z, dump = self.robot.GetPosition().split(", ", 3)
-        self.robotHeight = float(_z) - 211.1
-        self.robotHeightLabel.setText(f"Robot height: {self.robotHeight}")
+        self.robotHeight = float(_z) -  10
+        self.robotHeightLabel.setText(f"Robot height (mm) : {float(self.robotHeight):.2f}")
 
         def gui2():
             self.canMove = True
@@ -1305,6 +1401,10 @@ class MainWindow(QMainWindow):
         def gui1():
             self.canMove = False
             self.udpdateEnable()
+
+
+        self.robotHeight =  481.1 - 211.1
+        self.robotHeightLabel.setText(f"Robot height (mm) : {float(self.robotHeight):.2f}")
 
         self.executeFunction.emit(gui1)
 
@@ -1466,20 +1566,6 @@ class MainWindow(QMainWindow):
     def fail_box(self, message):
         QMessageBox.critical(self, "Status", message)
         
-    def validateDelay(self):
-        """Update the delay value when validated."""
-        try:
-            # Get the value from the input field and convert to float
-            delay_value = float(self.inputDelay.text())
-            # Update the displayed value
-            self.labelDelayValue.setText(f"{delay_value}")
-            # You could also store this value as an instance variable for later use
-            self.delay_seconds = delay_value
-            print(f"Delay set to {delay_value} seconds")
-        except ValueError:
-            # Handle invalid input
-            self.labelDelayValue.setText("Invalid")
-            print("Please enter a valid number for delay")
 
 
 if __name__ == '__main__':

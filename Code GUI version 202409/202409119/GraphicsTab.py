@@ -26,7 +26,7 @@ from latex_to_pixmap import render_latex_to_pixmap, create_vector_display, updat
 
 
 class GraphicsTab(QWidget):
-    def __init__(self):
+    def __init__(self, window):
         """
         Initialise le widget d'onglet graphique avec des méthodes pour l'affichage et les mises à jour.
         """
@@ -37,7 +37,7 @@ class GraphicsTab(QWidget):
         self.scale_input_3d = None
         self.scale_input_2d = None
         self.setWindowTitle("Simulation du Champ Magnétique")
-
+        self.window=window
         # Layout principal
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -47,10 +47,10 @@ class GraphicsTab(QWidget):
         layout.addWidget(self.tabs)
 
         # Variable
-        self.vector_scale_2d = 12
-        self.vector_length_3d = 1
+        self.vector_scale_2d = 100
+        self.vector_length_3d = 100
 
-        self.simulation = MagneticFieldCalculation(resolution=1)
+        self.simulation = MagneticFieldCalculation(window.surface_antenna, resolution=1)
         self.initUI()
 
     def initUI(self):
@@ -183,7 +183,9 @@ class GraphicsTab(QWidget):
             dialog.accept()
             print(f"Résolution modifiée à : {resolution_value}")
         except ValueError:
-            print("Veuillez entrer un nombre entier valide.")
+            print("La forme doit être un cube. Si c'est le cas, entrer un nombree entier valide")
+            self.window.fail_box("La forme doit être un cube. Si c'est le cas, entrer un nombree entier valide")
+
 
     def update_all_graphs(self, all=True):
         """
@@ -246,7 +248,7 @@ class GraphicsTab(QWidget):
         file_button.clicked.connect(self.select_file)
         button_layout.addWidget(file_button)
 
-        resolution_button = QPushButton("Modifier Résolution")
+        resolution_button = QPushButton("Improve resolution (only for cube)")
         resolution_button.clicked.connect(self.open_resolution_dialog)
         button_layout.addWidget(resolution_button)
 
@@ -284,17 +286,15 @@ class GraphicsTab(QWidget):
         Crée le layout en fonction de la dimension en reprenant la bonne fonction
         """
         scale_layout = QHBoxLayout()
-        scale_label = QLabel("Vector scale :")
+        scale_label = QLabel("Vector scale (%) :")
         scale_input = QLineEdit()
         scale_value_label = QLabel()
         scale_button = QPushButton("Valider")
 
-        info_label = QLabel("3D : Higher is bigger / 2D Higher is smaller :")
-        scale_label.setFixedSize(75, 25)
+        scale_label.setFixedSize(100, 25)
         scale_input.setFixedSize(50, 25)  # Définit une taille fixe pour éviter qu'il prenne trop de place
         scale_value_label.setFixedSize(50, 25)
         scale_button.setFixedSize(70, 25)
-        info_label.setFixedSize(500, 25)
         if dimension == "2D":
             scale_input.setText(str(self.vector_scale_2d))
             scale_value_label.setText(str(self.vector_scale_2d))
@@ -309,7 +309,6 @@ class GraphicsTab(QWidget):
         scale_layout.addWidget(scale_label)
         scale_layout.addWidget(scale_input)
         scale_layout.addWidget(scale_button)
-        scale_layout.addWidget(info_label)
 
         scale_layout.setAlignment(Qt.AlignLeft)
         return scale_layout
@@ -445,7 +444,7 @@ class GraphicsTab(QWidget):
 
     def plot_3d_vectors(self):
         """
-        Trace les vecteurs 3D sur l'onglet correspondant.
+        Trace les vecteurs 3D sur l'onglet correspondant avec une échelle automatique adaptée.
         """
         self.ax_3d.clear()  # Effacer les anciens vecteurs
 
@@ -453,24 +452,92 @@ class GraphicsTab(QWidget):
         points = self.simulation.measuredPoints
         points_interpolés = self.simulation.points_haute_resolution
 
+        # Collecter toutes les coordonnées pour calculer les dimensions de la boîte
+        all_points = []
+        all_magnitudes = []
+
+        # Ajouter les points originaux à la liste
+        for point in points:
+            if point.get("display", True):
+                all_points.append((point['x'], point['y'], point['z']))
+                mag = np.sqrt(point['Hx'] ** 2 + point['Hy'] ** 2 + point['Hz'] ** 2)
+                all_magnitudes.append(mag)
+
+        # Ajouter les points interpolés à la liste
+        for point in points_interpolés:
+            if point.get("display", True):
+                all_points.append((point['x'], point['y'], point['z']))
+                mag = np.sqrt(point['Hx'] ** 2 + point['Hy'] ** 2 + point['Hz'] ** 2)
+                all_magnitudes.append(mag)
+
+        # S'il n'y a pas de points à afficher, on sort de la fonction
+        if not all_points:
+            # Configurer les axes même sans points
+            self.ax_3d.set_title("3D Magnetic Field H_total")
+            self.ax_3d.set_xlabel('X (mm)')
+            self.ax_3d.set_ylabel('Y (mm)')
+            self.ax_3d.set_zlabel('Z (mm)')
+            self.canvas_3d.draw()
+            return
+
+        # Calculer les dimensions de la boîte
+        x_coords = [p[0] for p in all_points]
+        y_coords = [p[1] for p in all_points]
+        z_coords = [p[2] for p in all_points]
+
+        x_range = max(x_coords) - min(x_coords) if len(x_coords) > 1 else 1
+        y_range = max(y_coords) - min(y_coords) if len(y_coords) > 1 else 1
+        z_range = max(z_coords) - min(z_coords) if len(z_coords) > 1 else 1
+
+        # Calculer la diagonale de la boîte pour avoir une échelle de référence
+        box_diagonal = np.sqrt(x_range ** 2 + y_range ** 2 + z_range ** 2)
+
+        # Calculer la magnitude moyenne des vecteurs
+        avg_magnitude = np.mean(all_magnitudes) if all_magnitudes else 1
+
+        # Calculer un facteur d'échelle adapté
+        # On veut que la longueur des vecteurs soit un pourcentage de la diagonale
+        # Ce pourcentage est ajusté par l'utilisateur via self.vector_length_3d
+        base_scale = box_diagonal * 0.05  # 5% de la diagonale comme base
+        user_scale = self.vector_length_3d / 100.0  # Convertir le pourcentage utilisateur
+
+        # Calculer la longueur finale pour quiver
+        # Si normalize=True, on ne s'inquiète pas des magnitudes
+        if self.normalize_button_3D.isChecked():
+            length = base_scale * user_scale
+        else:
+            # Adapter en fonction de la magnitude moyenne
+            length = base_scale * user_scale / max(avg_magnitude, 0.001)
+
         # Tracer les vecteurs des points originaux
         for point in points:
-            if point["display"]:
+            if point.get("display", True):
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d, normalize=self.normalize_button_3D.isChecked())
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b',
+                                  length=length,
+                                  normalize=self.normalize_button_3D.isChecked())
+
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
-            if point["display"]:
+            if point.get("display", True):
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r', length=self.vector_length_3d, normalize=self.normalize_button_3D.isChecked())
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='r',
+                                  length=length,
+                                  normalize=self.normalize_button_3D.isChecked())
 
         # Configurer les axes
-        self.ax_3d.set_title("Vecteurs 3D du champ magnétique")
+        self.ax_3d.set_title("3D Magnetic Field H_total")
         self.ax_3d.set_xlabel('X (mm)')
         self.ax_3d.set_ylabel('Y (mm)')
         self.ax_3d.set_zlabel('Z (mm)')
+
+        # Définir les limites des axes avec une petite marge
+        margin = box_diagonal * 0.1  # 10% de marge
+        self.ax_3d.set_xlim([min(x_coords) - margin, max(x_coords) + margin])
+        self.ax_3d.set_ylim([min(y_coords) - margin, max(y_coords) + margin])
+        self.ax_3d.set_zlim([min(z_coords) - margin, max(z_coords) + margin])
 
         # Rafraîchir le canvas
         self.canvas_3d.draw()
@@ -647,12 +714,10 @@ class GraphicsTab(QWidget):
             "CSV Files (*.csv);;All Files (*)",
             options=options
         )
-
-        r = 0.01
-        f = 13.56e6  # Fréquence en Hz
-        omega = 2 * math.pi * f  # Pulsation angulaire en rad/s
-        s = math.pi * r ** 2
-        mu_0 = 4 * np.pi * 1e-7  # Perméabilité du vide (T·m/A)
+        f = self.simulation.F
+        omega = self.simulation.omega
+        s = self.simulation.S
+        mu_0 = self.simulation.mu_0 # Perméabilité du vide (T·m/A)
 
         if file_path:
             # Add .csv extension if not present
@@ -662,7 +727,7 @@ class GraphicsTab(QWidget):
             try:
                 with open(file_path, 'w') as file:
                     # Write header
-                    file.write('x,y,z,CH1_Max_Voltage,CH2_Max_Voltage,CH3_Max_Voltage,Hx,Hy,Hz\n')
+                    file.write('X,Y,Z,CH1_MAXIMUM,CH2_MAXIMUM,CH3_MAXIMUM,Hx,Hy,Hz\n')
 
                     # Write data points
                     for point in self.simulation.points_haute_resolution:
@@ -723,6 +788,7 @@ class GraphicsTab(QWidget):
             lambda plane_text: update_vector_display(self, plane_text, tab_type)
         )
         return selector_layout, plane_selector, value_selector, plane_label
+
     def update_plane_selector_2d_values(self):
         """Met à jour les valeurs disponibles dans le sélecteur pour l'onglet 2D."""
         self.update_plane_selector_values(self.value_selector_2d, self.plane_selector_2d.currentText())
@@ -782,6 +848,7 @@ class GraphicsTab(QWidget):
         filtered_points = self.filter_points(axe, value)
         if not filtered_points or len(filtered_points) < 2:
             print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
+            self.window.fail_box(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
         coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(
@@ -794,20 +861,76 @@ class GraphicsTab(QWidget):
         # Premier graphique (norme du champ)
         ax1 = self.figure_2d.add_subplot(gs[0, 0])
 
-        # Gestion du cas où les points sont alignés
-        if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
-            print("Points alignés sur une ligne - utilisation d'un scatter plot")
-            scatter = ax1.scatter(coord1, coord2, c=H_total, cmap='viridis', s=50, edgecolor='k')
-            colorbar = self.figure_2d.colorbar(scatter, cax=self.figure_2d.add_subplot(gs[0, 1]), label="|H| (A/m)")
-        else:
-            # Utilisation de l'interpolation pour des données 2D complètes
-            coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
-            H_total_grid = griddata((coord1, coord2), H_total,
-                                    (coord1_grid, coord2_grid), method="linear", fill_value=0)
-            contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
-            colorbar = self.figure_2d.colorbar(contour, cax=self.figure_2d.add_subplot(gs[0, 1]), label="|H| (A/m)")
+        # Vérification plus robuste pour détecter si les points sont alignés ou trop proches
+        # Calculer l'étendue des coordonnées sur chaque axe
+        coord1_range = np.max(coord1) - np.min(coord1)
+        coord2_range = np.max(coord2) - np.min(coord2)
 
-        ax1.set_title(f"Norme du champ |H| ({axe})")
+        # Si l'étendue est trop petite sur un axe ou s'il y a moins de 2 points uniques, utiliser scatter
+        coord1_unique = np.unique(np.round(coord1, decimals=10))
+        coord2_unique = np.unique(np.round(coord2, decimals=10))
+
+        min_range_threshold = 1e-10  # Seuil pour considérer une étendue comme trop petite
+        min_points_for_grid = 2  # Réduit à 2 au lieu de 3 pour permettre des grilles 2×N
+
+        # Affiche des informations de débogage sur le nombre de points et leurs positions
+        print(f"Points uniques sur axe 1: {len(coord1_unique)}, valeurs: {coord1_unique}")
+        print(f"Points uniques sur axe 2: {len(coord2_unique)}, valeurs: {coord2_unique}")
+
+        # Si les points forment une grille régulière avec au moins 2 points sur chaque axe,
+        # on peut faire une interpolation
+        use_contour = (coord1_range >= min_range_threshold and
+                       coord2_range >= min_range_threshold and
+                       len(coord1_unique) >= min_points_for_grid and
+                       len(coord2_unique) >= min_points_for_grid and
+                       len(filtered_points) >= 4)  # Au moins 4 points au total
+
+        print(f"Utilisation du contour: {use_contour}")
+
+        if not use_contour:
+            print(f"Points alignés ou trop proches - utilisation d'un scatter plot")
+            print(f"Étendues: {coord1_range}, {coord2_range}")
+            print(f"Nombres de points uniques: {len(coord1_unique)}, {len(coord2_unique)}")
+
+            scatter = ax1.scatter(coord1, coord2, c=H_total, cmap='viridis', s=50, edgecolor='k')
+            # Create colorbar with label at top
+            cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
+            colorbar = self.figure_2d.colorbar(scatter, cax=cbar_ax)
+            colorbar.ax.set_title("|H_plane| (A/m)", pad=10, fontsize=9)
+        else:
+            try:
+                # Utilisation de l'interpolation pour des données 2D complètes
+                coord1_grid, coord2_grid = np.meshgrid(coord1_unique, coord2_unique)
+
+                # Augmenter la densité de la grille d'interpolation pour une meilleure visualisation
+                # si nous avons peu de points
+                if len(coord1_unique) < 4 or len(coord2_unique) < 4:
+                    # Créer une grille plus dense pour l'interpolation
+                    x_dense = np.linspace(min(coord1_unique), max(coord1_unique), 20)
+                    y_dense = np.linspace(min(coord2_unique), max(coord2_unique), 20)
+                    coord1_grid, coord2_grid = np.meshgrid(x_dense, y_dense)
+
+                H_total_grid = griddata((coord1, coord2), H_total,
+                                        (coord1_grid, coord2_grid), method="linear", fill_value=0)
+
+                contour = ax1.contourf(coord1_grid, coord2_grid, H_total_grid, levels=20, cmap='viridis')
+                # Create colorbar with label at top
+                cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
+                colorbar = self.figure_2d.colorbar(contour, cax=cbar_ax)
+                colorbar.ax.set_title("|H_plane| (A/m)", pad=10, fontsize=9)
+
+                # Ajouter les points originaux en petit pour référence
+                ax1.scatter(coord1, coord2, color='black', s=10, alpha=0.5)
+
+            except Exception as e:
+                print(f"Erreur lors de l'interpolation: {e}")
+                # Fallback en cas d'erreur d'interpolation
+                scatter = ax1.scatter(coord1, coord2, c=H_total, cmap='viridis', s=50, edgecolor='k')
+                cbar_ax = self.figure_2d.add_subplot(gs[0, 1])
+                colorbar = self.figure_2d.colorbar(scatter, cax=cbar_ax)
+                colorbar.ax.set_title("|H_plane| (A/m)", pad=10, fontsize=9)
+
+        ax1.set_title(f"Norme du champ |H_plane| ({axe})")
         if axe == "x":
             ax1.set_xlabel(f'Y (mm)')
             ax1.set_ylabel(f'Z (mm)')
@@ -818,11 +941,13 @@ class GraphicsTab(QWidget):
             ax1.set_xlabel(f'X (mm)')
             ax1.set_ylabel(f'Y (mm)')
 
+        # Le reste de votre fonction reste inchangé...
+        scale = 1200 / self.vector_scale_2d
         # Deuxième graphique (vecteurs)
         self.ax2 = self.figure_2d.add_subplot(gs[0, 2])
         quiver = self.ax2.quiver(coord1, coord2, H_component1_norm, H_component2_norm,
-                                 color="red", scale=self.vector_scale_2d)
-        self.ax2.set_title(f"Magnetic Field Direction on plane {axe}")
+                                 color="red", scale=scale)
+        self.ax2.set_title(f"Magnetic Field on plane {plane}")
 
         if axe == "x":
             self.ax2.set_xlabel(f'Y (mm)')
@@ -884,32 +1009,38 @@ class GraphicsTab(QWidget):
         filtered_points = self.filter_points(axe, value)
         if not filtered_points or len(filtered_points) < 2:
             print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
+            self.window.fail_box(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
             return
 
         coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(
             filtered_points, axe)
 
-        # Création de la figure
+        # Création de la figure - using full width for the 3D plot
         self.figure_gaussian.clear()
-        gs = self.figure_gaussian.add_gridspec(1, 2, width_ratios=[1, 1])
 
-        # Premier graphique (surface 3D ou scatter 3D)
-        ax1 = self.figure_gaussian.add_subplot(gs[0, 0], projection='3d')
+        # Single plot taking full width
+        ax1 = self.figure_gaussian.add_subplot(111, projection='3d')
 
         # Gestion du cas où les points sont alignés
         if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
             print("Points alignés sur une ligne - utilisation d'un scatter plot 3D")
             scatter3d = ax1.scatter(coord1, coord2, H_total, c=H_total, cmap='viridis', s=50, edgecolor='k', alpha=0.8)
-            self.figure_gaussian.colorbar(scatter3d, ax=ax1, shrink=0.5, aspect=10, label="|H| (A/m)")
+            # Create colorbar without a label parameter
+            cbar = self.figure_gaussian.colorbar(scatter3d, ax=ax1, shrink=0.5, aspect=10)
+            # Set the label as a title on top
+            cbar.ax.set_title("|H_plane| (A/m)", pad=10, fontsize=9)
         else:
             # Utilisation de l'interpolation pour des données 2D complètes
             coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
             H_total_grid = griddata((coord1, coord2), H_total,
                                     (coord1_grid, coord2_grid), method='linear', fill_value=0)
             surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
-            self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10, label="|H| (A/m)")
+            # Create colorbar without a label parameter
+            cbar = self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
+            # Set the label as a title on top
+            cbar.ax.set_title("|H_plane| (A/m)", pad=10, fontsize=9)
 
-        ax1.set_title(f'Amplitude du champ magnétique |H| ({axe})')
+        ax1.set_title(f'Amplitude du champ magnétique |H_plane| ({axe})')
         if axe == "x":
             ax1.set_xlabel(f'Y (mm)')
             ax1.set_ylabel(f'Z (mm)')
@@ -919,47 +1050,13 @@ class GraphicsTab(QWidget):
         if axe == "z":
             ax1.set_xlabel(f'X (mm)')
             ax1.set_ylabel(f'Y (mm)')
-        ax1.set_zlabel('Amplitude |H| (A/m)')
+        ax1.set_zlabel('Amplitude |H_plane| (A/m)')
 
-        # Deuxième graphique (vecteurs)
-        self.ax_gaussian = self.figure_gaussian.add_subplot(gs[0, 1])
-        quiver = self.ax_gaussian.quiver(coord1, coord2, H_component1_norm, H_component2_norm,
-                                         scale=self.vector_scale_2d)
-        self.ax_gaussian.set_title(f"Champ vectoriel sur le plan {axe}")
-        if axe == "x":
-            self.ax_gaussian.set_xlabel(f'Y (mm)')
-            self.ax_gaussian.set_ylabel(f'Z (mm)')
-        if axe == "y":
-            self.ax_gaussian.set_xlabel(f'X (mm)')
-            self.ax_gaussian.set_ylabel(f'Z (mm)')
-        if axe == "z":
-            self.ax_gaussian.set_xlabel(f'X (mm)')
-            self.ax_gaussian.set_ylabel(f'Y (mm)')
+        # Adjust the view to better show the 3D plot
+        ax1.view_init(elev=30, azim=45)
 
-        # Ajustement des limites pour le graphique vectoriel
-        self._adjust_limits_for_square(self.ax_gaussian, coord1, coord2)
-
-        # Store vector base positions and components for interactivity using original data
-        self.gaussian_vector_bases = np.array([coord1, coord2]).T
-        self.gaussian_vector_hcb1 = H_component1_base
-        self.gaussian_vector_hcb2 = H_component2_base
-        self.gaussian_vector_hcn1 = H_component1_norm
-        self.gaussian_vector_hcn2 = H_component2_norm
-        self.gaussian_vector_ht = H_total
-
-        # Create the annotation once.
-        self.gaussian_annotation = self.ax_gaussian.annotate(
-            text="",
-            xy=(0, 0),
-            xytext=(6, 15),
-            textcoords="offset points",
-            bbox={"boxstyle": "round", "fc": "w"},
-            arrowprops={"arrowstyle": "->"}
-        )
-        self.gaussian_annotation.set_visible(False)
-
-        # Initialize interactivity for ax_gaussian
-        self.init_interactivity(self.ax_gaussian, self.canvas_gaussian)
+        # Update the canvas
+        self.canvas_gaussian.draw()
 
     def _adjust_limits_for_square(self, ax, coord1, coord2):
         """
@@ -1011,115 +1108,6 @@ class GraphicsTab(QWidget):
 
         # Assurer que le graphique est visuellement carré
         ax.set_box_aspect(1.0)
-
-    def update_tab_gaussian_and_radial(self):
-        """Met à jour les graphiques de l'onglet Champ Amplitude et Vectoriel."""
-        plane = self.plane_selector_3d.currentText()
-        if plane == "XY":
-            axe = "z"
-        if plane == "XZ":
-            axe = "y"
-        if plane == "YZ":
-            axe = "x"
-        if self.value_selector_3d.count() == 0:
-            return
-
-        try:
-            value = float(self.value_selector_3d.currentText())
-        except ValueError:
-            return
-
-        filtered_points = self.filter_points(axe, value)
-        if not filtered_points or len(filtered_points) < 3:
-            print(f"Aucun point trouvé pour le plan {axe}={value}, ou pas assez de points.")
-            return
-
-        coord1, coord2, H_total, H_component1_norm, H_component2_norm, H_component1_base, H_component2_base = self.prepare_plot_data(filtered_points, axe)
-
-        # Check if there are enough unique points for interpolation
-        if len(np.unique(coord1)) < 2 or len(np.unique(coord2)) < 2:
-            print("Insufficient unique points for grid interpolation; using scatter plot.")
-            self.figure_gaussian.clear()
-            ax1 = self.figure_gaussian.add_subplot(111, projection='3d')
-            ax1.scatter(coord1, coord2, H_total, c=H_total, cmap='viridis', edgecolor='k', alpha=0.8)
-            ax1.set_title(f"Points sur le plan {axe}")
-            if axe == "x":
-                ax1.set_xlabel(f'Y (mm)')
-                ax1.set_ylabel(f'Z (mm)')
-            if axe == "y":
-                ax1.set_xlabel(f'X (mm)')
-                ax1.set_ylabel(f'Z (mm)')
-            if axe == "z":
-                ax1.set_xlabel(f'X (mm)')
-                ax1.set_ylabel(f'Y (mm)')
-            ax1.set_zlabel('Amplitude |H| (A/m)')
-            self.canvas_gaussian.draw()
-            return
-
-        # Proceed with grid interpolation if data is sufficient
-        coord1_grid, coord2_grid = np.meshgrid(np.unique(coord1), np.unique(coord2))
-        H_total_grid = griddata((coord1, coord2), H_total, (coord1_grid, coord2_grid), method='linear', fill_value=0)
-        H_component1_norm_grid = griddata((coord1, coord2), H_component1_norm, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-        H_component2_norm_grid = griddata((coord1, coord2), H_component2_norm, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-        H_component1_base_grid = griddata((coord1, coord2), H_component1_base, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-        H_component2_base_grid = griddata((coord1, coord2), H_component2_base, (coord1_grid, coord2_grid),
-                                          method='linear', fill_value=0)
-
-        self.figure_gaussian.clear()
-        gs = self.figure_gaussian.add_gridspec(1, 2, width_ratios=[1, 1])
-
-        ax1 = self.figure_gaussian.add_subplot(gs[0, 0], projection='3d')
-        surf = ax1.plot_surface(coord1_grid, coord2_grid, H_total_grid, cmap='viridis', edgecolor='k', alpha=0.8)
-        ax1.set_title(f'Amplitude du champ magnétique |H| ({axe})')
-        if axe == "x":
-            ax1.set_xlabel(f'Y (mm)')
-            ax1.set_ylabel(f'Z (mm)')
-        if axe == "y":
-            ax1.set_xlabel(f'X (mm)')
-            ax1.set_ylabel(f'Z (mm)')
-        if axe == "z":
-            ax1.set_xlabel(f'X (mm)')
-            ax1.set_ylabel(f'Y (mm)')
-        ax1.set_zlabel('Amplitude |H| (A/m)')
-        self.figure_gaussian.colorbar(surf, ax=ax1, shrink=0.5, aspect=10)
-
-        self.ax_gaussian = self.figure_gaussian.add_subplot(gs[0, 1])
-        self.ax_gaussian.quiver(coord1_grid, coord2_grid, H_component1_norm_grid, H_component2_norm_grid, scale=self.vector_scale_2d)
-        self.ax_gaussian.set_title(f"Champ vectoriel sur le plan {axe}")
-        if axe == "x":
-            self.ax_gaussian.set_xlabel(f'Y (mm)')
-            self.ax_gaussian.set_ylabel(f'Z (mm)')
-        if axe == "y":
-            self.ax_gaussian.set_xlabel(f'X (mm)')
-            self.ax_gaussian.set_ylabel(f'Z (mm)')
-        if axe == "z":
-            self.ax_gaussian.set_xlabel(f'X (mm)')
-            self.ax_gaussian.set_ylabel(f'Y (mm)')
-        self.ax_gaussian.set_aspect('equal')
-        # Store vector base positions and components for interactivity.
-
-        self.gaussian_vector_bases = np.array([coord1_grid.flatten(), coord2_grid.flatten()]).T
-        self.gaussian_vector_hcb1 = H_component1_base_grid.flatten()
-        self.gaussian_vector_hcb2 = H_component2_base_grid.flatten()
-        self.gaussian_vector_hcn1 = H_component1_norm_grid.flatten()
-        self.gaussian_vector_hcn2 = H_component2_norm_grid.flatten()
-        self.gaussian_vector_ht = H_total_grid.flatten()
-
-        # Create the annotation once.
-        self.gaussian_annotation = self.ax_gaussian.annotate(
-            text="",
-            xy=(0, 0),
-            xytext=(6, 15),
-            textcoords="offset points",
-            bbox={"boxstyle": "round", "fc": "w"},
-            arrowprops={"arrowstyle": "->"}
-        )
-        self.gaussian_annotation.set_visible(False)
-        # Initialize interactivity for ax_gaussian
-        self.init_interactivity(self.ax_gaussian, self.canvas_gaussian)
 
     def init_interactivity(self, ax, canvas):
         """Initialize interactivity for a given axis and canvas."""
@@ -1249,6 +1237,7 @@ class GraphicsTab(QWidget):
         H_component1_base = np.array([p[f'H{axis1}'] for p in filtered_points])
         H_component2_base = np.array([p[f'H{axis2}'] for p in filtered_points])
 
+        H_total = np.sqrt(H_component1_base ** 2 + H_component2_base ** 2)
 
         if self.normalize_button_2D.isChecked():
             with np.errstate(divide='ignore', invalid='ignore'):
@@ -1265,8 +1254,7 @@ class GraphicsTab(QWidget):
             return
         if event.inaxes == self.ax2 and hasattr(self, "vector_bases"):
             self._handle_hover(event, "2d")
-        elif event.inaxes == self.ax_gaussian and hasattr(self, "gaussian_vector_bases"):
-            self._handle_hover(event, "3d")
+
 
     def _handle_hover(self, event, mode):
         """Handle hover logic for both 2D and 3D modes."""
@@ -1294,40 +1282,23 @@ class GraphicsTab(QWidget):
                 'plane_selector': self.plane_selector_2d,
                 'use_projection': True
             }
-        return {
-            'vectors': self.gaussian_vector_bases,
-            'hcn1': self.gaussian_vector_hcn1,
-            'hcn2': self.gaussian_vector_hcn2,
-            'hcb1': self.gaussian_vector_hcb1,
-            'hcb2': self.gaussian_vector_hcb2,
-            'ht': 'gaussian_vector_ht',
-            'annotation': self.gaussian_annotation,
-            'canvas': self.canvas_gaussian,
-            'plane_selector': self.plane_selector_3d,
-            'use_projection': False
-        }
+        else:
+            return
 
     def _find_closest_vector(self, P, config):
-        """Find the closest vector to point P."""
-        tol = 1
+        """Find the closest vector base to point P."""
+        tol = 5  # Augmenter légèrement la tolérance pour faciliter la sélection
         best_index = None
         best_distance = tol
 
         for i, base in enumerate(config['vectors']):
+            # Calculer simplement la distance au point de base du vecteur
             A = np.array(base)
-            hcn1, hcn2 = config['hcn1'][i], config['hcn2'][i]
-
-            if config['use_projection']:
-                distance = self._calculate_projection_distance(P, A, hcn1, hcn2)
-            else:
-                vector_tip = A + np.array([hcn1, hcn2])
-                distance = np.linalg.norm(P - vector_tip)
+            distance = np.linalg.norm(P - A)
 
             if distance < best_distance:
                 best_distance = distance
                 best_index = i
-                if not config['use_projection']:
-                    break
 
         return best_index
 
@@ -1357,7 +1328,9 @@ class GraphicsTab(QWidget):
         tip = A + np.array([hcn1, hcn2])
 
         plane = config['plane_selector'].currentText()
-        label_text = self._create_label_text(plane, hcb1, hcb2, config['ht'], index)
+
+        # Pass the coordinates (A) to the _create_label_text method
+        label_text = self._create_label_text(plane, hcb1, hcb2, config['ht'], index, A)
 
         annotation = config['annotation']
         annotation.xy = A
@@ -1367,12 +1340,34 @@ class GraphicsTab(QWidget):
         annotation.set_visible(True)
         config['canvas'].draw_idle()
 
-    def _create_label_text(self, plane, hcb1, hcb2, ht_attr, index):
+    def _create_label_text(self, plane, hcb1, hcb2, ht_attr, index, coordinates):
         """Create label text for annotation."""
-        base_text = f"H{plane[0]}={hcb1:.2f}\nH{plane[1]}={hcb2:.2f}"
+        if plane == "XY":
+            try:
+                z_value = float(self.value_selector_2d.currentText())
+                coord_text = f"({coordinates[0]:.2f}, {coordinates[1]:.2f}, {z_value:.2f})"
+            except ValueError:
+                coord_text = f"({coordinates[0]:.2f}, {coordinates[1]:.2f}, X)"
+        elif plane == "XZ":
+            try:
+                y_value = float(self.value_selector_2d.currentText())
+                coord_text = f"({coordinates[0]:.2f}, {y_value:.2f}, {coordinates[1]:.2f})"
+            except ValueError:
+                coord_text = f"({coordinates[0]:.2f}, X, {coordinates[1]:.2f})"
+        else:  # YZ
+            try:
+                x_value = float(self.value_selector_2d.currentText())
+                coord_text = f"({x_value:.2f}, {coordinates[0]:.2f}, {coordinates[1]:.2f})"
+            except ValueError:
+                coord_text = f"(X, {coordinates[0]:.2f}, {coordinates[1]:.2f})"
+        # Get the original vector component text
+        components_text = f"H{plane[0].lower()}={hcb1:.2f}\nH{plane[1].lower()}={hcb2:.2f}"
+        # Combine coordinate and component text
+        base_text = f"{coord_text}\n{components_text}"
+        # Add magnitude if available
         if hasattr(self, ht_attr):
             h = getattr(self, ht_attr)[index]
-            return f"{base_text}\n|H|={h:.2f}"
+            return f"{base_text}\n|H_plane|={h:.2f}"
         return base_text
 
     def _hide_annotation(self, config):

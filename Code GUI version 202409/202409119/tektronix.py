@@ -241,6 +241,7 @@ class Tektronix:
         hauteur (str): Utilisé pour faire fonctionner l'algorithme non linéaire qui a besoin de la hauteur du robot au moment de la mesure.
         """
         # Ouvrir le fichier pour écrire l'en-tête
+        hauteur = float(f"{hauteur:.2f}")
         self.current_time_str = dt.now().strftime("%Y%m%d_%H%M%S")
         if not os.path.exists(os.path.join(pwd, "Measures_tektronix")):
             os.makedirs(os.path.join(pwd, "Measures_tektronix"))

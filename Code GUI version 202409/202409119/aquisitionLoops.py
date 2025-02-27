@@ -110,11 +110,12 @@ def Acquire_points(points, robot, mfa, delay, form, x_ptr=None, y_ptr=None, z_pt
                    tektronix=None):
     z_ptr_reel = z_ptr - 211.1
     mfa.simulation.hRobot = z_ptr_reel
+    mfa.clear_all_graphs()
     if oscilloName == "tektronix":
         tektronix.create_file(z_ptr_reel, form)
         tektronix.scope.write("FPANEL:PRESS AUTOset")
     for point in points:
-        point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix, delay)
+        point.Acquire_point(robot, mfa, delay, log_dir, oscilloName, tektronix)
     mfa.update_all_graphs()
     if oscilloName == "tektronix":
         base_waveform_path = "C:/Users/Public/Tektronix/TekScope/WaveForm/"

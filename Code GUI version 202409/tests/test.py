@@ -1,52 +1,69 @@
-"""An example script for connecting and configuring scope for acquisition."""
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import sys
+import io
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
 
-from tm_devices import DeviceManager
-from tm_devices.drivers import MSO6B
-from tm_devices.helpers import PYVISA_PY_BACKEND
 
-with DeviceManager(verbose=True) as device_manager:
-    # Enable resetting the devices when connecting and closing
-    device_manager.setup_cleanup_enabled = True
-    device_manager.teardown_cleanup_enabled = True
+def render_latex_to_pixmap(latex_str, dpi=150):
+    """
+    Génère une image à partir d'une formule LaTeX et renvoie un QPixmap.
 
-    # Use the PyVISA-py backend
-    device_manager.visa_library = PYVISA_PY_BACKEND
+    Parameters:
+        latex_str (str): La chaîne contenant la formule LaTeX, par exemple r"$\vec{H}_x$"
+        dpi (int): La résolution de l'image générée.
+    Returns:
+        QPixmap: L'image contenant le rendu de la formule.
+    """
+    # Désactiver l'utilisation de LaTeX externe pour éviter l'erreur
+    mpl.rc('text', usetex=False)
+    mpl.rc('font', family='serif')
 
-    # Creating Scope driver object by providing ip address.
-    scope: MSO6B = device_manager.add_scope("172.16.115.218")
+    fig = plt.figure(figsize=(0.01, 0.01))
+    # Placer le texte sur la figure (nous n'avons pas besoin d'axes)
+    fig.text(0, 0, latex_str, fontsize=20)
 
-    # Turn on channel 1 and channel 2
-    scope.commands.display.waveview1.ch[1].state.write("ON")
-    scope.commands.display.waveview1.ch[2].state.write("ON")
+    # Supprimer les axes
+    plt.axis('off')
 
-    # Set channel 1 vertical scale to 10mV
-    scope.commands.ch[1].scale.write(10e-3)
+    # Sauvegarder la figure dans un tampon en mémoire
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight', transparent=True)
+    plt.close(fig)
+    buf.seek(0)
 
-    # Set horizontal record length to 20000
-    scope.commands.horizontal.recordlength.write(20000)
+    # Charger le tampon dans une QImage
+    qimg = QImage()
+    qimg.loadFromData(buf.read(), "PNG")
 
-    # Set horizontal position to 100
-    scope.commands.horizontal.position.write(10)
+    # Convertir la QImage en QPixmap
+    pixmap = QPixmap.fromImage(qimg)
+    return pixmap
 
-    # Set trigger type to Edge
-    scope.commands.trigger.a.type.write("EDGE")
 
-    # Acquisition setup
-    scope.commands.acquire.state.write("OFF")
-    scope.commands.acquire.mode.write("Sample")
-    scope.commands.acquire.stopafter.write("Sequence")
+class LatexLabelDemo(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Affichage de formule LaTeX dans QLabel")
+        layout = QVBoxLayout()
 
-    # Adding measurements
-    scope.commands.measurement.addmeas.write("AMPLitude")
-    scope.commands.measurement.addmeas.write("PK2PK")
-    scope.commands.measurement.addmeas.write("MAXIMUM")
-    scope.commands.measurement.meas[1].source.write("CH1")
-    scope.commands.measurement.meas[2].source.write("CH1")
-    scope.commands.measurement.meas[3].source.write("CH2")
+        # La formule LaTeX à afficher : H avec une flèche au-dessus et un indice x.
+        latex_formula = r"$\vec{H}_x$"
+        pixmap = render_latex_to_pixmap(latex_formula)
 
-    # Get the measurement values
-    scope.commands.acquire.state.write("ON")
+        # Créer un QLabel et y placer le pixmap
+        label = QLabel()
+        label.setPixmap(pixmap)
+        layout.addWidget(label)
 
-    if int(scope.commands.opc.query()) == 1:
-        scope.commands.measurement.meas[1].results.currentacq.mean.query()
-        scope.commands.measurement.meas[2].results.currentacq.maximum.query()
+        self.setLayout(layout)
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    demo = LatexLabelDemo()
+    demo.show()
+    sys.exit(app.exec_())
