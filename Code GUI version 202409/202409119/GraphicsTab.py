@@ -456,7 +456,7 @@ class GraphicsTab(QWidget):
             if point["display"]:
                 x, y, z = point['x'], point['y'], point['z']
                 Hx, Hy, Hz = point['Hx'], point['Hy'], point['Hz']
-                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d+1, normalize=self.normalize_button_3D.isChecked())
+                self.ax_3d.quiver(x, y, z, Hx, Hy, Hz, color='b', length=self.vector_length_3d, normalize=self.normalize_button_3D.isChecked())
         # Tracer les vecteurs interpolés
         for point in points_interpolés:
             if point["display"]:
@@ -660,7 +660,7 @@ class GraphicsTab(QWidget):
             try:
                 with open(file_path, 'w') as file:
                     # Write header
-                    file.write('x,y,z,CH1_Max_Voltage,CH2_Max_Voltage,CH3_Max_Voltage\n')
+                    file.write('x,y,z,CH1_Max_Voltage,CH2_Max_Voltage,CH3_Max_Voltage,Hx,Hy,Hz\n')
 
                     # Write data points
                     for point in self.simulation.points_haute_resolution:
@@ -669,7 +669,7 @@ class GraphicsTab(QWidget):
                         ax = point['Hx'] * mu_0 * s * omega
                         ay = point['Hy'] * mu_0 * s * omega
                         az = point['Hz'] * mu_0 * s * omega
-                        file.write(f"{point['x']},{point['y']},{point['z']},{ax},{ay},{az}\n")
+                        file.write(f"{point['x']},{point['y']},{point['z']},{ax},{ay},{az},{point['Hx']},{pointac['Hy']},{point['Hz']}\n")
             except Exception as e:
                 print(f"Error saving file: {e}")
 

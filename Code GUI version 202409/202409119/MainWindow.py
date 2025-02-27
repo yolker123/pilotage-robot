@@ -281,7 +281,7 @@ class MainWindow(QMainWindow):
         # button to open popup to setup measures
         self.buttonSetupOscilloscope = QPushButton('Setup Oscilloscope Parameters')
         self.buttonSetupOscilloscope.clicked.connect(self.setupMeasure)
-        self.buttonSetupOscilloscope.setEnabled(True)
+        self.buttonSetupOscilloscope.setEnabled(False)
 
         # button to select 5 axes robot
         self.buttonRobot5Axes = QPushButton('Robot 5 axes')
@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
         grid_ctrl.addWidget(self.buttonOpenPoint, 2, 3)
         # python
         self.robotHeight = 481.1 - 211.1
-        self.robotHeightLabel = QLabel(f"Robot height: {self.robotHeight} (mm) ")
+        self.robotHeightLabel = QLabel(f"Robot height: {round(self.robotHeight,2)} (mm) ")
         grid_ctrl.addWidget(self.robotHeightLabel, 6, 0, 1, 3)
         # Define widgets for figure grid
         self.labelFigureSelector = QLabel("Choose Measurement Method :")
@@ -707,6 +707,8 @@ class MainWindow(QMainWindow):
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
         Acquire_points(dataset, self.robot, self.mfa, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
+        if self.oscilloName == "lecroy":
+            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
         def gui2():
             self.canMove = True
@@ -741,6 +743,8 @@ class MainWindow(QMainWindow):
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
         Acquire_points(dataset, self.robot, self.mfa,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
+        if self.oscilloName == "lecroy":
+            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
         def gui2():
             self.canMove = True
@@ -847,6 +851,8 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
         Acquire_points(dataset, self.robot, self.mfa,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
+        if self.oscilloName == "lecroy":
+            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
         def gui2():
             self.canMove = True
@@ -890,6 +896,8 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
         Acquire_points(dataset, self.robot, self.mfa,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
+        if self.oscilloName == "lecroy":
+            convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
         def gui2():
             self.canMove = True
