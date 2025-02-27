@@ -1143,6 +1143,12 @@ class GraphicsTab(QWidget):
         ax = event.inaxes
         canvas = ax.figure.canvas
 
+        # Check if this is the first subplot (ax1) of the 2D tab
+        # We can identify it by checking if it's part of the 2D figure but not self.ax2
+        if canvas == self.canvas_2d and ax != self.ax2:
+            # This is ax1 of the 2D tab, don't zoom here
+            return
+
         # Get the current x and y limits
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -1169,6 +1175,15 @@ class GraphicsTab(QWidget):
         if event.inaxes is None:
             return
 
+        ax = event.inaxes
+        canvas = ax.figure.canvas
+
+        # Check if this is the first subplot (ax1) of the 2D tab
+        # We can identify it by checking if it's part of the 2D figure but not self.ax2
+        if canvas == self.canvas_2d and ax != self.ax2:
+            # This is ax1 of the 2D tab, don't zoom here
+            return
+
         if event.button == 1:  # Left mouse button
             self.dragging = True
             self.previous_point = (event.xdata, event.ydata)
@@ -1185,6 +1200,13 @@ class GraphicsTab(QWidget):
             return
 
         canvas = ax.figure.canvas
+
+        # Check if this is the first subplot (ax1) of the 2D tab
+        # We can identify it by checking if it's part of the 2D figure but not self.ax2
+        if canvas == self.canvas_2d and ax != self.ax2:
+            # This is ax1 of the 2D tab, don't zoom here
+            return
+
 
         # First check if we're doing a panning operation
         if self.dragging and event.xdata and event.ydata:

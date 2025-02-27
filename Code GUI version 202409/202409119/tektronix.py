@@ -59,14 +59,6 @@ class Tektronix:
                 self.device_manager = DeviceManager(verbose=False, config_options=CONFIG_OPTIONS)
                 atexit.register(self.device_manager.close)
 
-                # self.device_manager = DeviceManager(verbose=False)
-                # atexit.register(self.device_manager.close)
-                # self.device_manager.visa_library = PYVISA_PY_BACKEND
-                # self.device_manager.setup_cleanup_enabled = False
-                # self.device_manager.teardown_cleanup_enabled = False
-                #
-                # scope: MSO6B = self.device_manager.add_scope(OSCILLOSCOPE_IP)
-
                 self.device_manager.visa_library = SYSTEM_DEFAULT_VISA_BACKEND
                 # Note: USB and GPIB connections are not supported with PyVISA-py backend
                 scope: MSO6B = self.device_manager.add_scope("USB0::0x0699::0x0530::C071483::INSTR")
@@ -170,7 +162,7 @@ class Tektronix:
         self.main_window.validationText.append("Oscilloscope Configured")
 
 
-    def get_measures(self, point):
+    def get_measures(self, point, delay=1):
         """
         Lance une mesure sur les canaux configurés et enregistre les résultats dans un fichier.
         """
@@ -180,7 +172,7 @@ class Tektronix:
         # print(f"Run {run + 1}/{num_runs}")
         self.scope.commands.acquire.state.write("ON")
 
-        time.sleep(1)
+        time.sleep(delay)
         values = self.measure_channels()
 
         print(values)

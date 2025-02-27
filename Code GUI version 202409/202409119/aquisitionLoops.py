@@ -12,7 +12,6 @@ from oscilloscopeAcquisition import *
 import time
 from tektronix import *
 
-timeToSleep = 2  # time before getting the oscilloscope acquisition when the robot move
 
 """
     * @brief Point class
@@ -40,11 +39,7 @@ class Point:
     def setMinZ(self, z):
         self.zMin = z
 
-    """
-        * @brief Launch the acquisition of data on a given point
-    """
-
-    def Acquire_point(self, robot, mfa, log_dir="logAcquisition", oscilloName="", tektronix=None):
+    def Acquire_point(self, robot, mfa, delay, log_dir="logAcquisition", oscilloName="", tektronix=None):
         print(f"Acquiring {self.name}")
         if robot.type == "DENSO":
             err = robot.Energize(1)
@@ -54,13 +49,13 @@ class Point:
             err = robot.GoToPosition(self.x, self.y, self.z, self.w, self.p, self.timeout)
         if err != 0:
             print(f"Error moving to {self.name} : {err}")
-        time.sleep(timeToSleep)
+        time.sleep(delay)
 
         # TODO : MOCHE
         if oscilloName == "lecroy":
             getAcquisition(mfa, f"{self.name}", 0, log_dir)
         if oscilloName == "tektronix":
-            values = tektronix.get_measures(f"{self.name}")
+            values = tektronix.get_measures(f"{self.name}", delay)
             point_ = self.name.strip("()")
             val = point_.split()
             x, y, z = map(float, val)
@@ -95,6 +90,10 @@ class Point:
                 mfa.update_all_graphs(False)
         print("aquired")
 
+    """
+        * @brief Launch the acquisition of data on a given point
+    """
+
 
 def createRobot(type):
     robot = RobotObject(type)
@@ -107,7 +106,7 @@ def createRobot(type):
 """
 
 
-def Acquire_points(points, robot, mfa, form, x_ptr=None, y_ptr=None, z_ptr=None, log_dir="logAcquisition", oscilloName="",
+def Acquire_points(points, robot, mfa, delay, form, x_ptr=None, y_ptr=None, z_ptr=None, log_dir="logAcquisition", oscilloName="",
                    tektronix=None):
     z_ptr_reel = z_ptr - 211.1
     mfa.simulation.hRobot = z_ptr_reel
@@ -115,7 +114,7 @@ def Acquire_points(points, robot, mfa, form, x_ptr=None, y_ptr=None, z_ptr=None,
         tektronix.create_file(z_ptr_reel, form)
         tektronix.scope.write("FPANEL:PRESS AUTOset")
     for point in points:
-        point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix)
+        point.Acquire_point(robot, mfa, log_dir, oscilloName, tektronix, delay)
     mfa.update_all_graphs()
     if oscilloName == "tektronix":
         base_waveform_path = "C:/Users/Public/Tektronix/TekScope/WaveForm/"

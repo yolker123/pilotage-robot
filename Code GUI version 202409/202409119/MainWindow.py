@@ -326,6 +326,27 @@ class MainWindow(QMainWindow):
         self.buttonDisconnectRobot.clicked.connect(self.disconnect)
         self.buttonDisconnectRobot.setEnabled(False)
 
+        # Add a delay configuration row
+        self.labelDelay = QLabel("Delay between measurements (in s):")
+        self.inputDelay = QLineEdit()
+        self.inputDelay.setFixedWidth(60)  # Make the input field reasonably sized
+        self.buttonValidateDelay = QPushButton("Validate")
+        self.labelDelayValue = QLabel("1")  # Default value
+        self.delay_seconds = 1
+
+        # Create a horizontal layout for the delay components
+        delay_layout = QHBoxLayout()
+        delay_layout.addWidget(self.labelDelay)
+        delay_layout.addWidget(self.inputDelay)
+        delay_layout.addWidget(self.buttonValidateDelay)
+        delay_layout.addWidget(QLabel("Current delay:"))
+        delay_layout.addWidget(self.labelDelayValue)
+        delay_layout.addStretch(1)  # Push everything to the left
+
+        # Create a widget to hold this layout
+        delay_widget = QWidget()
+        delay_widget.setLayout(delay_layout)
+
         grid_btn = QGridLayout()  # creat gridlayout named grid_btn
 
         grid_btn.addWidget(self.buttonConnectOscilloscope, 0, 0)
@@ -333,6 +354,9 @@ class MainWindow(QMainWindow):
         grid_btn.addWidget(self.buttonConnectRobot, 2, 0)
         grid_btn.addWidget(self.buttonHomePosition, 3, 0)
         grid_btn.addWidget(self.buttonDisconnectRobot, 4, 0)
+
+        grid_btn.addWidget(delay_widget, 5, 0)
+        self.buttonValidateDelay.clicked.connect(self.validateDelay)
 
         btn_widget.setLayout(grid_btn)  # display the buttons by putting grid_btn gridlayout to btn_widget widget
 
@@ -706,7 +730,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = nfc(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_second, "nfc", x, y, z, log_dir, self.oscilloName, self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -742,7 +766,7 @@ class MainWindow(QMainWindow):
         z = float(_z)
         dataset = emvco(x, y, z)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"emvco", x, y, z, log_dir, self.oscilloName,  self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -796,7 +820,7 @@ class MainWindow(QMainWindow):
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
 
-        Acquire_points(dataset, self.robot, self.mfa,"cube", x, y, z, log_dir, self.oscilloName,  self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"cube", x, y, z, log_dir, self.oscilloName,  self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -850,7 +874,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"cylindre", x, y, z, log_dir, self.oscilloName,self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -895,7 +919,7 @@ class MainWindow(QMainWindow):
         while not ready:
             time.sleep(0.001)
         self.robot.SetSpeed(speed)
-        Acquire_points(dataset, self.robot, self.mfa,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
+        Acquire_points(dataset, self.robot, self.mfa, self.delay_second,"semisphere", x, y, z, log_dir, self.oscilloName, self.tektronix)
         if self.oscilloName == "lecroy":
             convert_formats(f"{log_dir}/logMeasure/", f"{log_dir}/magnetic_field_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}_{self.mfa.simulation.hRobot}.csv")
 
@@ -1441,6 +1465,21 @@ class MainWindow(QMainWindow):
 
     def fail_box(self, message):
         QMessageBox.critical(self, "Status", message)
+        
+    def validateDelay(self):
+        """Update the delay value when validated."""
+        try:
+            # Get the value from the input field and convert to float
+            delay_value = float(self.inputDelay.text())
+            # Update the displayed value
+            self.labelDelayValue.setText(f"{delay_value}")
+            # You could also store this value as an instance variable for later use
+            self.delay_seconds = delay_value
+            print(f"Delay set to {delay_value} seconds")
+        except ValueError:
+            # Handle invalid input
+            self.labelDelayValue.setText("Invalid")
+            print("Please enter a valid number for delay")
 
 
 if __name__ == '__main__':
